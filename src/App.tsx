@@ -2,10 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/CRM";
 import Finance from "./pages/Finance";
@@ -33,6 +37,95 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route 
+        path="/login" 
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
+      />
+      <Route 
+        path="/signup" 
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <SignUp />} 
+      />
+      
+      {/* Protected routes */}
+      <Route 
+        path="/" 
+        element={<Navigate to="/login" replace />} 
+      />
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <Layout><Dashboard /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/crm" 
+        element={
+          <ProtectedRoute>
+            <Layout><CRM /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/finance" 
+        element={
+          <ProtectedRoute>
+            <Layout><Finance /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/inventory" 
+        element={
+          <ProtectedRoute>
+            <Layout><Inventory /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/sales" 
+        element={
+          <ProtectedRoute>
+            <Layout><Sales /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/hr" 
+        element={
+          <ProtectedRoute>
+            <Layout><HR /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/analytics" 
+        element={
+          <ProtectedRoute>
+            <Layout><Analytics /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <ProtectedRoute>
+            <Layout><Settings /></Layout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => {
   console.log("App mounting");
   return (
@@ -40,19 +133,11 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout><Dashboard /></Layout>} />
-            <Route path="/crm" element={<Layout><CRM /></Layout>} />
-            <Route path="/finance" element={<Layout><Finance /></Layout>} />
-            <Route path="/inventory" element={<Layout><Inventory /></Layout>} />
-            <Route path="/sales" element={<Layout><Sales /></Layout>} />
-            <Route path="/hr" element={<Layout><HR /></Layout>} />
-            <Route path="/analytics" element={<Layout><Analytics /></Layout>} />
-            <Route path="/settings" element={<Layout><Settings /></Layout>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
