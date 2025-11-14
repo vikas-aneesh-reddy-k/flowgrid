@@ -106,10 +106,23 @@ npm run seed     # Seed database
 
 ## Deployment
 
-The project includes GitHub Actions workflows for CI/CD:
+### AWS EC2 Deployment (Recommended for Production)
+
+This project includes automatic deployment to AWS EC2 with GitHub Actions.
+
+**Quick Setup:**
+1. Launch an Ubuntu EC2 instance on AWS
+2. Run the setup script on your EC2 instance
+3. Add GitHub secrets (AWS_EC2_HOST, AWS_EC2_USER, AWS_SSH_KEY)
+4. Push to main branch - automatic deployment!
+
+📖 **[Complete AWS Deployment Guide](./AWS_DEPLOYMENT_GUIDE.md)**
+
+### GitHub Pages (Static Demo)
+
+The project also supports deployment to GitHub Pages for static demos:
 - Automatic builds on push to main
-- Deployment to GitHub Pages
-- AWS EC2 deployment (optional)
+- Deployed via GitHub Actions
 
 ## License
 

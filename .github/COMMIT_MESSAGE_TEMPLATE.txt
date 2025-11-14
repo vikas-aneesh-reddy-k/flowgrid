@@ -1,0 +1,21 @@
+Setup AWS EC2 deployment with GitHub Actions
+
+- Added GitHub Actions workflow for automatic EC2 deployment
+- Created EC2 setup script with Node.js, MongoDB, Nginx, PM2
+- Added comprehensive deployment documentation
+- Configured CI/CD pipeline for main branch
+- Updated README with deployment instructions
+
+Files added:
+- .github/workflows/aws-deploy.yml (GitHub Actions workflow)
+- AWS_DEPLOYMENT_GUIDE.md (Complete guide)
+- aws-quick-setup.md (Quick reference)
+- DEPLOYMENT_SUMMARY.md (Overview)
+- START_HERE.md (Getting started)
+- get-github-secrets.sh (Helper script)
+
+Files updated:
+- setup-ec2.sh (Enhanced with better output)
+- README.md (Added AWS deployment section)
+
+This enables automatic deployment to AWS EC2 on every push to main branch.

@@ -1,0 +1,139 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        cache: npm
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Install server dependencies
+      run: cd server && npm ci
+    
+    - name: Lint
+      run: npm run lint --if-present
+      continue-on-error: true
+    
+    - name: Type check
+      run: npm run typecheck --if-present
+      continue-on-error: true
+    
+    - name: Run unit tests
+      run: npm run test:unit --if-present
+      continue-on-error: true
+    
+    - name: Build server
+      run: cd server && npm run build
+    
+    - name: Build frontend
+      run: npm run build
+    
+    - name: Deploy to EC2 via SSH
+      env:
+        AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
+        AWS_EC2_USER: ${{ secrets.AWS_EC2_USER }}
+        AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}
+      run: |
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "$AWS_SSH_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H $AWS_EC2_HOST >> ~/.ssh/known_hosts
+        
+        # Deploy to EC2
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $AWS_EC2_USER@$AWS_EC2_HOST << 'ENDSSH'
+          set -e
+          
+          # Configuration
+          APP_DIR="$HOME/flowgrid"
+          
+          echo "🚀 Starting deployment..."
+          
+          # Stop existing services
+          echo "Stopping existing services..."
+          pm2 stop flowgrid-backend || true
+          
+          # Update code
+          if [ -d "$APP_DIR" ]; then
+            echo "Updating repository..."
+            cd "$APP_DIR"
+            git fetch origin
+            git reset --hard origin/main
+            git pull origin main
+          else
+            echo "Cloning repository..."
+            git clone https://github.com/${{ github.repository }}.git "$APP_DIR"
+            cd "$APP_DIR"
+          fi
+          
+          # Install dependencies
+          echo "Installing dependencies..."
+          npm ci
+          cd server
+          npm ci
+          cd ..
+          
+          # Build applications
+          echo "Building applications..."
+          
+          # Get EC2 public IP
+          EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+          
+          # Create production env file
+          cat > .env.production << EOF
+        VITE_API_URL=http://${EC2_IP}/api
+        EOF
+          
+          npm run build
+          
+          cd server
+          npm run build
+          cd ..
+          
+          # Setup environment if not exists
+          if [ ! -f "server/.env" ]; then
+            echo "Creating environment file..."
+            cat > server/.env << EOF
+        PORT=5000
+        MONGODB_URI=mongodb://localhost:27017/flowgrid
+        JWT_SECRET=$(openssl rand -base64 32)
+        NODE_ENV=production
+        CORS_ORIGIN=http://${EC2_IP}
+        EOF
+          fi
+          
+          # Deploy frontend
+          echo "Deploying frontend..."
+          sudo mkdir -p /var/www/flowgrid
+          sudo cp -r dist/* /var/www/flowgrid/
+          sudo chown -R www-data:www-data /var/www/flowgrid
+          
+          # Start backend
+          echo "Starting backend service..."
+          cd server
+          pm2 start dist/index.js --name flowgrid-backend || pm2 restart flowgrid-backend
+          pm2 save
+          cd ..
+          
+          echo "✅ Deployment completed successfully!"
+          pm2 status flowgrid-backend
+        ENDSSH
+        
+        echo "✅ Deployment to EC2 completed!"
+        echo "🌐 Application URL: http://$AWS_EC2_HOST"
