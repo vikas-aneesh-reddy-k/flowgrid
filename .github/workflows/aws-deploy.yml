@@ -1,0 +1,43 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    if: github.repository == 'vikas-aneesh-reddy-k/flowgrid'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Deploy to EC2 via SSH
+      if: ${{ secrets.AWS_EC2_HOST != '' }}
+      env:
+        AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
+        AWS_EC2_USER: ${{ secrets.AWS_EC2_USER }}
+        AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}
+      run: |
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "$AWS_SSH_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H $AWS_EC2_HOST >> ~/.ssh/known_hosts
+        
+        # Trigger deployment on EC2
+        ssh -i ~/.ssh/deploy_key $AWS_EC2_USER@$AWS_EC2_HOST 'bash -s' < deploy-to-aws.sh
+        
+        echo "✅ Deployment triggered successfully!"
+    
+    - name: Deployment skipped
+      if: ${{ secrets.AWS_EC2_HOST == '' }}
+      run: |
+        echo "⚠️  AWS deployment skipped - secrets not configured"
+        echo "To enable AWS deployment, add these secrets to your repository:"
+        echo "  - AWS_EC2_HOST"
+        echo "  - AWS_EC2_USER"
+        echo "  - AWS_SSH_KEY"
