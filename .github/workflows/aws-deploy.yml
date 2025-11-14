@@ -1,22 +1,30 @@
 name: Deploy to AWS EC2
 
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+  workflow_dispatch:  # Only run manually until secrets are configured
 
 jobs:
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
-    if: github.repository == 'vikas-aneesh-reddy-k/flowgrid'
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Check if secrets are configured
+      id: check_secrets
+      run: |
+        if [ -z "${{ secrets.AWS_EC2_HOST }}" ]; then
+          echo "configured=false" >> $GITHUB_OUTPUT
+          echo "⚠️  AWS secrets not configured"
+        else
+          echo "configured=true" >> $GITHUB_OUTPUT
+          echo "✅ AWS secrets configured"
+        fi
+    
     - name: Deploy to EC2 via SSH
-      if: ${{ secrets.AWS_EC2_HOST != '' }}
+      if: steps.check_secrets.outputs.configured == 'true'
       env:
         AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
         AWS_EC2_USER: ${{ secrets.AWS_EC2_USER }}
@@ -34,10 +42,19 @@ jobs:
         echo "✅ Deployment triggered successfully!"
     
     - name: Deployment skipped
-      if: ${{ secrets.AWS_EC2_HOST == '' }}
+      if: steps.check_secrets.outputs.configured == 'false'
       run: |
         echo "⚠️  AWS deployment skipped - secrets not configured"
+        echo ""
         echo "To enable AWS deployment, add these secrets to your repository:"
-        echo "  - AWS_EC2_HOST"
-        echo "  - AWS_EC2_USER"
-        echo "  - AWS_SSH_KEY"
+        echo "  Settings → Secrets and variables → Actions → New repository secret"
+        echo ""
+        echo "Required secrets:"
+        echo "  - AWS_EC2_HOST: Your EC2 public IP address"
+        echo "  - AWS_EC2_USER: ubuntu"
+        echo "  - AWS_SSH_KEY: Contents of your .pem key file"
+        echo ""
+        echo "After configuring secrets, you can enable automatic deployment by adding:"
+        echo "  on:"
+        echo "    push:"
+        echo "      branches: [ main ]"
