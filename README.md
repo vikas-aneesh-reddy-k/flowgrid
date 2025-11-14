@@ -1,105 +1,118 @@
-# Welcome to your Lovable project
+# FlowGrid ERP System
 
-## Project info
+A modern Enterprise Resource Planning (ERP) system built with React, TypeScript, Node.js, and MongoDB.
 
-**URL**: https://lovable.dev/projects/111ff0cd-8ec5-4b6b-8b03-6790c70d66e7
+## Features
 
-## How can I edit this code?
+- 📊 **Dashboard** - Real-time analytics and KPIs
+- 💼 **Sales Management** - Customer and order tracking
+- 📦 **Inventory Management** - Product and stock control
+- 👥 **HR Management** - Employee and payroll management
+- 💰 **Finance** - Revenue tracking and financial reports
+- 📈 **Analytics** - Advanced data visualization with charts
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+**Frontend:**
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS + shadcn/ui
+- React Query
+- Recharts
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/111ff0cd-8ec5-4b6b-8b03-6790c70d66e7) and start prompting.
+**Backend:**
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT Authentication
 
-Changes made via Lovable will be committed automatically to this repo.
+## Quick Start
 
-**Use your preferred IDE**
+### Prerequisites
+- Node.js 18+
+- MongoDB
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+# Clone repository
+git clone https://github.com/vikas-aneesh-reddy-k/flowgrid.git
+cd flowgrid
 
-Follow these steps:
+# Install dependencies
+npm install
+cd server && npm install && cd ..
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Setup environment files
+cp .env.example .env
+cp server/.env.example server/.env
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Start MongoDB (if not running)
+mongod
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Seed database
+cd server && npm run seed && cd ..
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start backend (Terminal 1)
+cd server && npm run dev
+
+# Start frontend (Terminal 2)
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open http://localhost:8081
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Demo Credentials
+- **Email:** admin@flowgrid.com
+- **Password:** admin123
 
-**Use GitHub Codespaces**
+## Project Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## Local development
-
-Scripts:
-
-```sh
-npm run dev       # Start Vite dev server
-npm run build     # Production build
-npm run typecheck # TypeScript diagnostics (no emit)
-npm run lint      # ESLint
-npm run preview   # Preview prod build
+```
+flowgrid/
+├── src/                  # Frontend React app
+│   ├── components/      # Reusable components
+│   ├── pages/          # Page components
+│   ├── hooks/          # Custom React hooks
+│   ├── contexts/       # Context providers
+│   └── lib/            # Utilities & API client
+├── server/             # Backend Express API
+│   └── src/
+│       ├── controllers/  # Request handlers
+│       ├── models/       # MongoDB schemas
+│       ├── routes/       # API routes
+│       ├── middleware/   # Auth & validation
+│       └── scripts/      # Database seeding
+└── public/             # Static assets
 ```
 
-## CI/CD
+## Scripts
 
-### GitHub Actions
-- `.github/workflows/ci.yml`: Install, lint, typecheck, build on pushes/PRs to `main`.
-- `.github/workflows/deploy.yml`: Deploy `dist/` to GitHub Pages on push to `main`.
+**Frontend:**
+```bash
+npm run dev      # Development server
+npm run build    # Production build
+npm run preview  # Preview build
+```
 
-### Jenkins
-This repo includes a `Jenkinsfile` with stages: Checkout → Install → Lint → Typecheck → Build → Deploy (optional).
+**Backend:**
+```bash
+npm run dev      # Development server
+npm run build    # Compile TypeScript
+npm start        # Production server
+npm run seed     # Seed database
+```
 
-Deploy to GitHub Pages from Jenkins requires:
-1. Jenkins credentials:
-   - `github-pages-token`: GitHub token with `repo` scope.
-   - `github-repo-fullname`: Secret text like `owner/repo`.
-2. A pipeline parameter or env var `DEPLOY_PAGES=true` on main branch.
-3. Enable Pages in repo Settings, source = `gh-pages` branch.
+## Deployment
 
-Project storyboard automation:
-- `.github/workflows/project-auto.yml` adds new issues/PRs to your GitHub Project.
-- Create repo secrets `PROJECT_URL` and `PROJECT_TOKEN` (token needs write access to that project).
+The project includes GitHub Actions workflows for CI/CD:
+- Automatic builds on push to main
+- Deployment to GitHub Pages
+- AWS EC2 deployment (optional)
 
-## How can I deploy this project?
+## License
 
-Simply open [Lovable](https://lovable.dev/projects/111ff0cd-8ec5-4b6b-8b03-6790c70d66e7) and click on Share -> Publish.
+MIT
 
-## Can I connect a custom domain to my Lovable project?
+## Author
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Vikas Aneesh Reddy K
