@@ -24,8 +24,8 @@ test.describe('Login Page Tests', () => {
     await demoButton.click();
     
     // Check if fields are filled
-    await expect(emailInput).toHaveValue('admin@flogrid.com');
-    await expect(passwordInput).toHaveValue('password123');
+    await expect(emailInput).toHaveValue('admin@flowgrid.com');
+    await expect(passwordInput).toHaveValue('admin123');
   });
 
   test('should show/hide password when toggle button is clicked', async ({ page }) => {

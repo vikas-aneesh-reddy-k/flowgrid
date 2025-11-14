@@ -158,8 +158,8 @@ export default function Login() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setEmail("admin@flogrid.com");
-                  setPassword("password123");
+                  setEmail("admin@flowgrid.com");
+                  setPassword("admin123");
                 }}
                 className="mt-2"
               >
