@@ -43,9 +43,20 @@ jobs:
           
           echo "🚀 Starting deployment..."
           
+          # Check if required tools are installed
+          if ! command -v node &> /dev/null; then
+            echo "❌ Node.js is not installed. Please run setup-ec2.sh first!"
+            exit 1
+          fi
+          
+          if ! command -v pm2 &> /dev/null; then
+            echo "❌ PM2 is not installed. Please run setup-ec2.sh first!"
+            exit 1
+          fi
+          
           # Stop existing services
           echo "Stopping existing services..."
-          pm2 stop flowgrid-backend || true
+          pm2 stop flowgrid-backend 2>/dev/null || true
           
           # Update code
           if [ -d "$APP_DIR" ]; then
@@ -62,9 +73,9 @@ jobs:
           
           # Install dependencies
           echo "Installing dependencies..."
-          npm ci
+          npm install
           cd server
-          npm ci
+          npm install
           cd ..
           
           # Build applications
@@ -105,7 +116,7 @@ jobs:
           # Start backend
           echo "Starting backend service..."
           cd server
-          pm2 start dist/index.js --name flowgrid-backend || pm2 restart flowgrid-backend
+          pm2 start dist/index.js --name flowgrid-backend 2>/dev/null || pm2 restart flowgrid-backend
           pm2 save
           cd ..
           
