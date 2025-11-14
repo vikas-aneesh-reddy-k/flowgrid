@@ -43,6 +43,15 @@ cd ..
 
 # Build applications
 echo -e "${YELLOW}Building applications...${NC}"
+
+# Get EC2 public IP
+EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+# Create production env file
+cat > .env.production << EOF
+VITE_API_URL=http://${EC2_IP}/api
+EOF
+
 npm run build
 
 cd server
