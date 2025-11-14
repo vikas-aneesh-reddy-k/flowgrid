@@ -35,15 +35,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     // Check if user is authenticated on app load
     const checkAuth = () => {
+      const authToken = localStorage.getItem("authToken");
       const isAuthenticated = localStorage.getItem("isAuthenticated");
       const userEmail = localStorage.getItem("userEmail");
       const userName = localStorage.getItem("userName");
 
-      if (isAuthenticated === "true" && userEmail) {
+      // Only consider authenticated if we have a token
+      if (isAuthenticated === "true" && userEmail && authToken) {
         setUser({
           email: userEmail,
           name: userName || undefined,
         });
+      } else {
+        // Clear invalid auth state
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("userName");
       }
       setIsLoading(false);
     };
@@ -55,22 +63,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, accept any non-empty credentials
-      if (email && password) {
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("userEmail", email);
-        
-        setUser({ email });
+      // Call the real login API
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
         setIsLoading(false);
-        return true;
+        return false;
       }
+
+      const data = await response.json();
+      
+      // Store the authentication token
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("userName", data.user.name);
+      
+      setUser({
+        email: data.user.email,
+        name: data.user.name,
+      });
       
       setIsLoading(false);
-      return false;
+      return true;
     } catch (error) {
+      console.error('Login error:', error);
       setIsLoading(false);
       return false;
     }
@@ -101,6 +124,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
+    localStorage.removeItem("authToken");
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userName");

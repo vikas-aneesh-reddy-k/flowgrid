@@ -4,8 +4,28 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { InventoryStatus } from "@/components/dashboard/InventoryStatus";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { useDashboardStats } from "@/hooks/useDashboard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
+  const { data: dashboardData, isLoading } = useDashboardStats();
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-20 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  const stats = dashboardData?.data || {};
+  const metrics = stats.metrics || {};
+  const lowStockItems = stats.lowStockItems || [];
+
   return (
     <div className="p-6 space-y-6">
       {/* Page Header */}
@@ -18,35 +38,35 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Revenue"
-          value={1235000}
+          value={metrics.totalRevenue?.value || 0}
           prefix="$"
-          change={12.5}
+          change={metrics.totalRevenue?.change || 0}
           changeLabel="vs last month"
           icon={DollarSign}
           iconColor="bg-gradient-primary"
         />
         <MetricCard
           title="Active Orders"
-          value={86}
-          change={-5.2}
-          changeLabel="vs last week"
+          value={metrics.activeOrders?.value || 0}
+          change={0}
+          changeLabel="in progress"
           icon={ShoppingCart}
           iconColor="bg-gradient-success"
         />
         <MetricCard
           title="Inventory Value"
-          value={458200}
+          value={metrics.inventoryValue?.value || 0}
           prefix="$"
-          change={8.1}
-          changeLabel="vs last month"
+          change={lowStockItems.length}
+          changeLabel="low stock items"
           icon={Package}
           iconColor="bg-gradient-info"
         />
         <MetricCard
-          title="Employees"
-          value={124}
-          change={2.4}
-          changeLabel="new this month"
+          title="Total Employees"
+          value={metrics.totalEmployees?.value || 0}
+          change={0}
+          changeLabel="active employees"
           icon={Users}
           iconColor="bg-warning"
         />

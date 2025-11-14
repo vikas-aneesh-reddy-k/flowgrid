@@ -203,3 +203,86 @@ export const updateLeaveRequest = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const processPayroll = async (req: Request, res: Response) => {
+  try {
+    const { payPeriodStart, payPeriodEnd, employeeIds } = req.body;
+
+    if (!payPeriodStart || !payPeriodEnd) {
+      return res.status(400).json({ message: 'Pay period start and end dates are required' });
+    }
+
+    // Get employees to process (all active or specific ones)
+    const query: any = { status: 'active' };
+    if (employeeIds && employeeIds.length > 0) {
+      query._id = { $in: employeeIds };
+    }
+
+    const employees = await Employee.find(query);
+
+    if (employees.length === 0) {
+      return res.status(404).json({ message: 'No employees found to process payroll' });
+    }
+
+    const processedPayrolls = [];
+    const errors = [];
+
+    for (const employee of employees) {
+      try {
+        // Calculate payroll
+        const baseSalary = employee.baseSalary;
+        const overtimePay = 0; // Can be customized
+        const bonuses = 0; // Can be customized
+        const grossPay = baseSalary + overtimePay + bonuses;
+        
+        // Calculate deductions (simplified - 20% tax, 5% insurance)
+        const taxDeduction = grossPay * 0.20;
+        const insuranceDeduction = grossPay * 0.05;
+        const netPay = grossPay - taxDeduction - insuranceDeduction;
+
+        const payrollId = `PAY-${Date.now()}-${employee.employeeId}`;
+
+        employee.payroll.push({
+          payrollId,
+          payPeriodStart: new Date(payPeriodStart),
+          payPeriodEnd: new Date(payPeriodEnd),
+          baseSalary,
+          overtimePay,
+          bonuses,
+          grossPay,
+          taxDeduction,
+          insuranceDeduction,
+          netPay,
+          status: 'paid',
+          payDate: new Date(),
+        });
+
+        await employee.save();
+        processedPayrolls.push({
+          employeeId: employee.employeeId,
+          name: employee.name,
+          netPay,
+          payrollId,
+        });
+      } catch (error: any) {
+        errors.push({
+          employeeId: employee.employeeId,
+          name: employee.name,
+          error: error.message,
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        processed: processedPayrolls.length,
+        failed: errors.length,
+        payrolls: processedPayrolls,
+        errors,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};

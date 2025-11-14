@@ -4,7 +4,7 @@ export interface ICustomer extends Document {
   name: string;
   email: string;
   phone: string;
-  status: 'active' | 'premium' | 'inactive';
+  status: 'lead' | 'active' | 'premium' | 'inactive';
   company?: string;
   segment: 'Enterprise' | 'SMB' | 'Startup';
   address?: {
@@ -16,6 +16,7 @@ export interface ICustomer extends Document {
   totalOrders: number;
   totalValue: number;
   lastContact?: Date;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +40,7 @@ const customerSchema = new Schema<ICustomer>({
   },
   status: {
     type: String,
-    enum: ['active', 'premium', 'inactive'],
+    enum: ['lead', 'active', 'premium', 'inactive'],
     default: 'active',
   },
   company: {
@@ -67,6 +68,10 @@ const customerSchema = new Schema<ICustomer>({
   },
   lastContact: {
     type: Date,
+  },
+  notes: {
+    type: String,
+    trim: true,
   },
 }, {
   timestamps: true,

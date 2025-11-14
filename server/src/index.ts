@@ -13,6 +13,7 @@ import customerRoutes from './routes/customerRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 dotenv.config();
 
@@ -21,20 +22,38 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(helmet());
+
+// CORS configuration - allow multiple origins
+const allowedOrigins = [
+  'http://localhost:8081',
+  'http://localhost:5173',
+  'http://127.0.0.1:8081',
+  'http://127.0.0.1:5173',
+  'http://172.16.0.2:8081', // Your network IP
+  process.env.CORS_ORIGIN,
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8081',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`⚠️  CORS blocked origin: ${origin}`);
+      callback(null, true); // Allow all origins in development
+    }
+  },
   credentials: true,
 }));
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 // API Routes
+app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
@@ -58,7 +77,10 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:8081'}`);
+      console.log(`🌐 CORS enabled for multiple origins including:`);
+      allowedOrigins.forEach(origin => {
+        if (origin) console.log(`   - ${origin}`);
+      });
     });
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -7,6 +7,7 @@ import {
   addPayroll,
   addLeaveRequest,
   updateLeaveRequest,
+  processPayroll,
 } from '../controllers/employeeController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -19,5 +20,6 @@ router.put('/:id', authenticate, authorize('admin', 'hr_manager'), updateEmploye
 router.post('/:id/payroll', authenticate, authorize('admin', 'hr_manager'), addPayroll);
 router.post('/:id/leave', authenticate, addLeaveRequest);
 router.put('/leave/:leaveId', authenticate, authorize('admin', 'hr_manager'), updateLeaveRequest);
+router.post('/payroll/process', authenticate, authorize('admin', 'hr_manager'), processPayroll);
 
 export default router;

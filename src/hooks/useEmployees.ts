@@ -101,3 +101,20 @@ export const useUpdateLeaveRequest = () => {
     },
   });
 };
+
+export const useProcessPayroll = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { payPeriodStart: string; payPeriodEnd: string; employeeIds?: string[] }) =>
+      api.processPayroll(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Payroll processed successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to process payroll');
+    },
+  });
+};

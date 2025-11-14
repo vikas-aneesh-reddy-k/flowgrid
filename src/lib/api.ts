@@ -12,7 +12,8 @@ class ApiClient {
       'Content-Type': 'application/json',
     };
 
-    const token = localStorage.getItem('token');
+    // Check both 'authToken' and 'token' for backwards compatibility
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -286,6 +287,16 @@ class ApiClient {
       {
         method: 'PUT',
         body: JSON.stringify({ status }),
+      }
+    );
+  }
+
+  async processPayroll(data: { payPeriodStart: string; payPeriodEnd: string; employeeIds?: string[] }) {
+    return this.request<{ success: boolean; data: any }>(
+      '/employees/payroll/process',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
       }
     );
   }

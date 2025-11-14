@@ -1,37 +1,59 @@
 import { Package, AlertTriangle, TrendingDown, CheckCircle } from "lucide-react";
-
-const inventoryItems = [
-  {
-    name: "Raw Materials",
-    stock: 85,
-    status: "optimal",
-    items: 2340,
-    trend: "+5%",
-  },
-  {
-    name: "Work in Progress",
-    stock: 62,
-    status: "normal",
-    items: 890,
-    trend: "+2%",
-  },
-  {
-    name: "Finished Goods",
-    stock: 35,
-    status: "low",
-    items: 450,
-    trend: "-8%",
-  },
-  {
-    name: "Spare Parts",
-    stock: 15,
-    status: "critical",
-    items: 120,
-    trend: "-15%",
-  },
-];
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function InventoryStatus() {
+  const { data: productsData, isLoading } = useProducts();
+  const products = productsData?.data || [];
+
+  // Calculate inventory statistics
+  const totalProducts = products.length;
+  const activeProducts = products.filter(p => p.status === 'active').length;
+  const lowStockProducts = products.filter(p => p.status === 'low_stock').length;
+  const outOfStockProducts = products.filter(p => p.status === 'out_of_stock').length;
+  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+
+  const inventoryItems = [
+    {
+      name: "In Stock",
+      stock: totalProducts > 0 ? Math.round((activeProducts / totalProducts) * 100) : 0,
+      status: "optimal",
+      items: activeProducts,
+      trend: `${activeProducts} items`,
+    },
+    {
+      name: "Low Stock",
+      stock: totalProducts > 0 ? Math.round((lowStockProducts / totalProducts) * 100) : 0,
+      status: "low",
+      items: lowStockProducts,
+      trend: `${lowStockProducts} items`,
+    },
+    {
+      name: "Out of Stock",
+      stock: totalProducts > 0 ? Math.round((outOfStockProducts / totalProducts) * 100) : 0,
+      status: "critical",
+      items: outOfStockProducts,
+      trend: `${outOfStockProducts} items`,
+    },
+    {
+      name: "Total Value",
+      stock: 100,
+      status: "normal",
+      items: totalProducts,
+      trend: `$${totalValue.toLocaleString()}`,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="bg-card rounded-lg p-6 shadow-card">
+        <h3 className="text-lg font-semibold text-card-foreground mb-4">Inventory Status</h3>
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+        </div>
+      </div>
+    );
+  }
   const getStatusColor = (status: string) => {
     switch (status) {
       case "optimal":

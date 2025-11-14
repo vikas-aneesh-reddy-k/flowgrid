@@ -1,0 +1,53 @@
+# Docker Compose for testing environment
+version: '3.8'
+
+services:
+  mongodb-test:
+    image: mongo:7
+    container_name: flowgrid-mongodb-test
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    ports:
+      - "27018:27017"
+    networks:
+      - test-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: flowgrid-backend-test
+    environment:
+      NODE_ENV: test
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:admin123@mongodb-test:27017/flowgrid-test?authSource=admin
+      JWT_SECRET: test-jwt-secret
+    ports:
+      - "5001:5000"
+    depends_on:
+      mongodb-test:
+        condition: service_healthy
+    networks:
+      - test-network
+
+  frontend-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: flowgrid-frontend-test
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend-test
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

@@ -1,55 +1,65 @@
 import { FileText, Package, Users, DollarSign, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const activities = [
-  {
-    id: 1,
-    type: "invoice",
-    message: "Invoice #INV-2024-001 created",
-    user: "John Smith",
-    time: "2 minutes ago",
-    icon: FileText,
-    color: "bg-primary",
-  },
-  {
-    id: 2,
-    type: "order",
-    message: "New order #ORD-2024-089 received",
-    user: "System",
-    time: "15 minutes ago",
-    icon: ShoppingCart,
-    color: "bg-success",
-  },
-  {
-    id: 3,
-    type: "employee",
-    message: "Sarah Johnson joined the team",
-    user: "HR Department",
-    time: "1 hour ago",
-    icon: Users,
-    color: "bg-info",
-  },
-  {
-    id: 4,
-    type: "inventory",
-    message: "Low stock alert for Product SKU-1234",
-    user: "System",
-    time: "2 hours ago",
-    icon: Package,
-    color: "bg-warning",
-  },
-  {
-    id: 5,
-    type: "payment",
-    message: "Payment received from ABC Corp",
-    user: "Finance",
-    time: "3 hours ago",
-    icon: DollarSign,
-    color: "bg-success",
-  },
-];
+import { useOrders } from "@/hooks/useOrders";
+import { useProducts } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
 
 export function RecentActivity() {
+  const { data: ordersData, isLoading: ordersLoading } = useOrders();
+  const { data: productsData, isLoading: productsLoading } = useProducts();
+
+  const orders = ordersData?.data || [];
+  const products = productsData?.data || [];
+
+  // Get recent orders (last 3)
+  const recentOrders = orders.slice(0, 3);
+  
+  // Get low stock products (last 2)
+  const lowStockProducts = products.filter(p => p.status === 'low_stock' || p.status === 'out_of_stock').slice(0, 2);
+
+  // Build activities array from real data
+  const activities = [
+    ...recentOrders.map(order => ({
+      id: order._id,
+      type: "order",
+      message: `Order ${order.orderNumber} - ${order.customerName}`,
+      user: order.createdByName || "System",
+      time: formatDistanceToNow(new Date(order.orderDate), { addSuffix: true }),
+      icon: ShoppingCart,
+      color: order.status === 'completed' ? "bg-success" : "bg-primary",
+    })),
+    ...lowStockProducts.map(product => ({
+      id: product._id,
+      type: "inventory",
+      message: `${product.status === 'out_of_stock' ? 'Out of stock' : 'Low stock'}: ${product.name}`,
+      user: "System",
+      time: "Stock alert",
+      icon: Package,
+      color: product.status === 'out_of_stock' ? "bg-destructive" : "bg-warning",
+    })),
+  ].slice(0, 5);
+
+  if (ordersLoading || productsLoading) {
+    return (
+      <div className="bg-card rounded-lg p-6 shadow-card">
+        <h3 className="text-lg font-semibold text-card-foreground mb-4">Recent Activity</h3>
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <div className="bg-card rounded-lg p-6 shadow-card">
+        <h3 className="text-lg font-semibold text-card-foreground mb-4">Recent Activity</h3>
+        <p className="text-center text-muted-foreground py-8">No recent activity</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card rounded-lg p-6 shadow-card">
       <h3 className="text-lg font-semibold text-card-foreground mb-4">Recent Activity</h3>
