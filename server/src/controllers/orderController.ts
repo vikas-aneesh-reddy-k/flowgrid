@@ -4,11 +4,11 @@ import { Product } from '../models/Product.js';
 import { Customer } from '../models/Customer.js';
 import { AuthRequest } from '../middleware/auth.js';
 
-export const getOrders = async (req: Request, res: Response) => {
+export const getOrders = async (req: Request, res: Response): Promise<void> => {
   try {
     const { status, customerId, page = 1, limit = 50 } = req.query;
     
-    const query: any = {};
+    const query: Record<string, any> = {};
     
     if (status) query.status = status;
     if (customerId) query.customerId = customerId;
@@ -37,7 +37,7 @@ export const getOrders = async (req: Request, res: Response) => {
   }
 };
 
-export const getOrder = async (req: Request, res: Response) => {
+export const getOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('customerId')
@@ -56,7 +56,7 @@ export const getOrder = async (req: Request, res: Response) => {
   }
 };
 
-export const createOrder = async (req: AuthRequest, res: Response) => {
+export const createOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { customerId, orderItems, shippingAddress } = req.body;
 
@@ -141,7 +141,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateOrder = async (req: Request, res: Response) => {
+export const updateOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const { status, deliveryDate } = req.body;
     
@@ -164,7 +164,7 @@ export const updateOrder = async (req: Request, res: Response) => {
   }
 };
 
-export const updateInvoiceStatus = async (req: Request, res: Response) => {
+export const updateInvoiceStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { status, paidDate, paymentMethod } = req.body;
     

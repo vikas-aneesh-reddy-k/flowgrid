@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { Product } from '../models/Product.js';
 
-export const getProducts = async (req: Request, res: Response) => {
+export const getProducts = async (req: Request, res: Response): Promise<void> => {
   try {
     const { search, category, status, page = 1, limit = 50 } = req.query;
     
-    const query: any = {};
+    const query: Record<string, any> = {};
     
     if (search) {
       query.$or = [
@@ -39,7 +39,7 @@ export const getProducts = async (req: Request, res: Response) => {
   }
 };
 
-export const getProduct = async (req: Request, res: Response) => {
+export const getProduct = async (req: Request, res: Response): Promise<void> => {
   try {
     const product = await Product.findById(req.params.id);
     
@@ -56,7 +56,7 @@ export const getProduct = async (req: Request, res: Response) => {
   }
 };
 
-export const createProduct = async (req: Request, res: Response) => {
+export const createProduct = async (req: Request, res: Response): Promise<void> => {
   try {
     const product = await Product.create(req.body);
 
@@ -69,7 +69,7 @@ export const createProduct = async (req: Request, res: Response) => {
   }
 };
 
-export const updateProduct = async (req: Request, res: Response) => {
+export const updateProduct = async (req: Request, res: Response): Promise<void> => {
   try {
     // Find the product first
     const product = await Product.findById(req.params.id);
@@ -104,7 +104,7 @@ export const updateProduct = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteProduct = async (req: Request, res: Response) => {
+export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
 
@@ -121,7 +121,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
   }
 };
 
-export const getLowStockProducts = async (req: Request, res: Response) => {
+export const getLowStockProducts = async (req: Request, res: Response): Promise<void> => {
   try {
     const products = await Product.find({
       status: { $in: ['low_stock', 'out_of_stock'] },

@@ -4,7 +4,7 @@ import { Product } from '../models/Product.js';
 import { Customer } from '../models/Customer.js';
 import { Employee } from '../models/Employee.js';
 
-export const getDashboardStats = async (req: Request, res: Response) => {
+export const getDashboardStats = async (req: Request, res: Response): Promise<void> => {
   try {
     // Calculate date ranges
     const now = new Date();
@@ -104,11 +104,11 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   }
 };
 
-export const getAnalytics = async (req: Request, res: Response) => {
+export const getAnalytics = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate } = req.query;
 
-    const dateFilter: any = {};
+    const dateFilter: Record<string, any> = {};
     if (startDate) dateFilter.$gte = new Date(startDate as string);
     if (endDate) dateFilter.$lte = new Date(endDate as string);
 
