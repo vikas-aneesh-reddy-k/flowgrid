@@ -1,0 +1,414 @@
+================================================================================
+                    FLOWGRID CI/CD SETUP CHECKLIST
+================================================================================
+
+Print this or keep it open while setting up your CI/CD pipeline.
+
+================================================================================
+PHASE 1: PREREQUISITES
+================================================================================
+
+[ ] AWS EC2 instance is running
+[ ] EC2 is Ubuntu 20.04 or 22.04
+[ ] Security group allows port 22 (SSH)
+[ ] Security group allows port 80 (HTTP)
+[ ] Security group allows port 443 (HTTPS) - optional
+[ ] SSH key (.pem file) is downloaded
+[ ] SSH key permissions set: chmod 400 flowgrid-key.pem
+[ ] GitHub repository is created
+[ ] Git is installed on local machine
+[ ] Can SSH into EC2: ssh -i flowgrid-key.pem ubuntu@YOUR_EC2_IP
+
+================================================================================
+PHASE 2: COLLECT GITHUB SECRETS
+================================================================================
+
+[ ] Ran setup helper script:
+    Windows: setup-github-secrets.bat
+    Mac/Linux: ./setup-github-secrets.sh
+
+[ ] Collected AWS_EC2_HOST (EC2 public IP)
+    Value: _______________________
+
+[ ] Collected AWS_EC2_USER (usually 'ubuntu')
+    Value: _______________________
+
+[ ] Collected AWS_SSH_KEY (complete .pem file content)
+    [ ] Includes: -----BEGIN RSA PRIVATE KEY-----
+    [ ] Includes: -----END RSA PRIVATE KEY-----
+
+[ ] Collected MONGODB_URI
+    Value: _______________________
+    Default: mongodb://localhost:27017/flowgrid
+
+================================================================================
+PHASE 3: ADD SECRETS TO GITHUB
+================================================================================
+
+Go to: https://github.com/YOUR_USERNAME/flowgrid/settings/secrets/actions
+
+[ ] Clicked "New repository secret"
+
+[ ] Added secret: AWS_EC2_HOST
+    Name: AWS_EC2_HOST
+    Value: [Your EC2 IP]
+
+[ ] Added secret: AWS_EC2_USER
+    Name: AWS_EC2_USER
+    Value: ubuntu
+
+[ ] Added secret: AWS_SSH_KEY
+    Name: AWS_SSH_KEY
+    Value: [Complete .pem file content]
+
+[ ] Added secret: MONGODB_URI
+    Name: MONGODB_URI
+    Value: mongodb://localhost:27017/flowgrid
+
+[ ] Verified all 4 secrets are listed in GitHub
+
+================================================================================
+PHASE 4: INITIAL EC2 SETUP
+================================================================================
+
+[ ] Connected to EC2:
+    ssh -i flowgrid-key.pem ubuntu@YOUR_EC2_IP
+
+[ ] Cloned repository:
+    git clone https://github.com/YOUR_USERNAME/flowgrid.git
+
+[ ] Changed to directory:
+    cd flowgrid
+
+[ ] Made script executable:
+    chmod +x deploy-complete.sh
+
+[ ] Ran setup script:
+    ./deploy-complete.sh
+
+[ ] Waited 5-10 minutes for completion
+
+[ ] Setup completed without errors
+
+[ ] Saw success message with application URLs
+
+================================================================================
+PHASE 5: VERIFY SERVICES
+================================================================================
+
+On EC2, check services are running:
+
+[ ] MongoDB is running:
+    sudo systemctl status mongod
+    Status: active (running)
+
+[ ] Nginx is running:
+    sudo systemctl status nginx
+    Status: active (running)
+
+[ ] Backend is running:
+    pm2 status
+    Status: online
+
+[ ] Health endpoint works:
+    curl http://localhost/health
+    Response: {"status":"healthy"}
+
+[ ] API health works:
+    curl http://localhost/api/health
+    Response: {"status":"healthy","database":"connected"}
+
+================================================================================
+PHASE 6: VERIFY DEPLOYMENT
+================================================================================
+
+On your local machine:
+
+[ ] Made verification script executable:
+    chmod +x verify-deployment.sh
+
+[ ] Ran verification:
+    ./verify-deployment.sh YOUR_EC2_IP
+
+[ ] All tests passed:
+    [ ] Server reachability
+    [ ] Health check
+    [ ] API health check
+    [ ] Frontend homepage
+    [ ] Login endpoint
+    [ ] Products API
+    [ ] Customers API
+    [ ] Orders API
+    [ ] Employees API
+    [ ] Dashboard API
+    [ ] MongoDB connection
+
+[ ] Saw success message: "ALL TESTS PASSED!"
+
+================================================================================
+PHASE 7: TEST APPLICATION
+================================================================================
+
+[ ] Opened browser to: http://YOUR_EC2_IP
+
+[ ] Application loaded successfully
+
+[ ] Logged in with demo credentials:
+    Email: admin@flowgrid.com
+    Password: admin123
+
+[ ] Dashboard page loaded
+
+[ ] Tested navigation:
+    [ ] Analytics page
+    [ ] Sales page
+    [ ] Inventory page
+    [ ] HR page
+    [ ] Finance page
+
+[ ] All pages loaded without errors
+
+================================================================================
+PHASE 8: TEST AUTOMATED DEPLOYMENT
+================================================================================
+
+On your local machine:
+
+[ ] Made a test change:
+    echo "# CI/CD Test" >> README.md
+
+[ ] Staged changes:
+    git add .
+
+[ ] Committed changes:
+    git commit -m "Test CI/CD automation"
+
+[ ] Pushed to main:
+    git push origin main
+
+[ ] Went to GitHub Actions:
+    https://github.com/YOUR_USERNAME/flowgrid/actions
+
+[ ] Saw workflow running
+
+[ ] Waited 3-5 minutes
+
+[ ] Workflow completed successfully (green checkmark)
+
+[ ] Checked application still works:
+    http://YOUR_EC2_IP
+
+[ ] Changes are visible
+
+================================================================================
+PHASE 9: FINAL VERIFICATION
+================================================================================
+
+[ ] Application is accessible: http://YOUR_EC2_IP
+
+[ ] Can login successfully
+
+[ ] All features work correctly
+
+[ ] GitHub Actions shows green checkmark
+
+[ ] No errors in logs:
+    pm2 logs flowgrid-backend
+
+[ ] MongoDB data persists after restart
+
+[ ] Services restart automatically
+
+================================================================================
+PHASE 10: DOCUMENTATION
+================================================================================
+
+[ ] Read QUICK_START_CI_CD.md
+
+[ ] Bookmarked important documentation:
+    [ ] CI_CD_SETUP_GUIDE.md
+    [ ] DEPLOYMENT_CHECKLIST.md
+    [ ] TROUBLESHOOTING.md
+    [ ] GITHUB_SECRETS_SETUP.md
+
+[ ] Saved EC2 IP address for reference
+
+[ ] Saved demo login credentials
+
+[ ] Noted location of logs:
+    Backend: pm2 logs flowgrid-backend
+    Nginx: /var/log/nginx/
+    MongoDB: /var/log/mongodb/
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+Your setup is successful when ALL of these are true:
+
+[ ] ✅ All 4 GitHub secrets configured
+[ ] ✅ Initial EC2 setup completed
+[ ] ✅ All services running (MongoDB, Nginx, PM2)
+[ ] ✅ Verification script passed all tests
+[ ] ✅ Application accessible at http://YOUR_EC2_IP
+[ ] ✅ Can login with demo credentials
+[ ] ✅ All pages load correctly
+[ ] ✅ API endpoints respond correctly
+[ ] ✅ MongoDB connected and working
+[ ] ✅ Automated deployment works
+[ ] ✅ GitHub Actions shows green checkmarks
+
+================================================================================
+TROUBLESHOOTING QUICK REFERENCE
+================================================================================
+
+If something fails:
+
+1. Check GitHub Actions logs:
+   GitHub → Actions tab → Click failed workflow
+
+2. Check EC2 service status:
+   sudo systemctl status mongod
+   sudo systemctl status nginx
+   pm2 status
+
+3. Check backend logs:
+   pm2 logs flowgrid-backend
+
+4. Restart services:
+   pm2 restart flowgrid-backend
+   sudo systemctl restart nginx
+   sudo systemctl restart mongod
+
+5. Run verification:
+   ./verify-deployment.sh YOUR_EC2_IP
+
+6. Review documentation:
+   See TROUBLESHOOTING.md
+
+================================================================================
+USEFUL COMMANDS
+================================================================================
+
+SSH to EC2:
+  ssh -i flowgrid-key.pem ubuntu@YOUR_EC2_IP
+
+View backend logs:
+  pm2 logs flowgrid-backend
+
+Restart backend:
+  pm2 restart flowgrid-backend
+
+Restart Nginx:
+  sudo systemctl restart nginx
+
+Restart MongoDB:
+  sudo systemctl restart mongod
+
+Check service status:
+  pm2 status
+  sudo systemctl status mongod
+  sudo systemctl status nginx
+
+Test health:
+  curl http://YOUR_EC2_IP/health
+  curl http://YOUR_EC2_IP/api/health
+
+View Nginx logs:
+  sudo tail -f /var/log/nginx/access.log
+  sudo tail -f /var/log/nginx/error.log
+
+================================================================================
+NEXT STEPS AFTER SETUP
+================================================================================
+
+Immediate:
+[ ] Test all application features
+[ ] Verify data persistence
+[ ] Check logs for any warnings
+
+Short term:
+[ ] Set up HTTPS with Let's Encrypt
+[ ] Configure MongoDB authentication
+[ ] Set up automated backups
+[ ] Add monitoring and alerts
+
+Long term:
+[ ] Create staging environment
+[ ] Add more tests
+[ ] Implement auto-scaling
+[ ] Set up CDN
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+✅ Every commit to 'main' automatically deploys to production
+✅ Deployment takes 3-5 minutes
+✅ GitHub Actions runs tests before deploying
+✅ Services restart automatically
+✅ MongoDB data is preserved
+✅ Environment variables are preserved
+
+⚠️  Never commit .env files
+⚠️  Never commit .pem keys
+⚠️  Always test locally first
+⚠️  Monitor first few deployments
+⚠️  Keep documentation updated
+
+================================================================================
+SUPPORT RESOURCES
+================================================================================
+
+Documentation:
+  - START_CI_CD_SETUP.md - Start here
+  - QUICK_START_CI_CD.md - 10-minute guide
+  - CI_CD_SETUP_GUIDE.md - Complete guide
+  - DEPLOYMENT_CHECKLIST.md - Detailed checklist
+  - TROUBLESHOOTING.md - Common issues
+  - GITHUB_SECRETS_SETUP.md - Secrets help
+
+Scripts:
+  - setup-github-secrets.sh/.bat - Collect secrets
+  - deploy-complete.sh - EC2 setup
+  - verify-deployment.sh/.bat - Test deployment
+
+GitHub Actions:
+  - .github/workflows/deploy.yml - CI/CD workflow
+
+================================================================================
+COMPLETION
+================================================================================
+
+Setup Date: _______________
+EC2 IP: _______________
+Application URL: http://_______________
+Status: [ ] Complete [ ] In Progress [ ] Issues
+
+Notes:
+_____________________________________________________________________________
+_____________________________________________________________________________
+_____________________________________________________________________________
+
+================================================================================
+                        SETUP COMPLETE! 🎉
+================================================================================
+
+Your CI/CD pipeline is now active!
+
+Just commit and push to main - everything else is automatic!
+
+git add .
+git commit -m "Your changes"
+git push origin main
+
+Watch deployment: GitHub → Actions tab
+Access application: http://YOUR_EC2_IP
+
+Demo login:
+  Email: admin@flowgrid.com
+  Password: admin123
+
+Happy coding! 🚀
+
+================================================================================

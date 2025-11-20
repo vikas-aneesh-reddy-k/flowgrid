@@ -16,6 +16,13 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.production
+
+# Sensitive files
+*.pem
+*.key
+.github-secrets-config.txt
+server/.env
 
 # Editor directories and files
 .vscode/*

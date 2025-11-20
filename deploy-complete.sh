@@ -41,6 +41,9 @@ if ! command -v mongod &> /dev/null; then
     echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
     sudo apt-get update -qq
     sudo apt-get install -y mongodb-org
+    
+    # Configure MongoDB to bind to localhost
+    sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 0.0.0.0/' /etc/mongod.conf || true
 fi
 
 # Install Nginx
