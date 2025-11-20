@@ -36,25 +36,31 @@ jobs:
         npm ci
         npm run build
 
-    - name: Deploy to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.AWS_EC2_HOST }}
-        username: ${{ secrets.AWS_EC2_USER }}
-        key: ${{ secrets.AWS_SSH_KEY }}
-        source: "dist/,server/dist/,server/package.json,server/package-lock.json"
-        target: "/home/ubuntu/flowgrid-deploy"
-
-    - name: Setup and Restart Services
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.AWS_EC2_HOST }}
-        username: ${{ secrets.AWS_EC2_USER }}
-        key: ${{ secrets.AWS_SSH_KEY }}
-        script: |
+    - name: Deploy and Restart Services
+      run: |
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.AWS_EC2_HOST }} >> ~/.ssh/known_hosts
+        
+        # Create deployment archive
+        tar -czf deploy.tar.gz dist/ server/dist/ server/package.json server/package-lock.json
+        
+        # Copy to EC2
+        scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }}:/home/ubuntu/
+        
+        # Deploy on EC2
+        ssh -i ~/.ssh/deploy_key ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }} << 'ENDSSH'
           set -e
           
           echo "🚀 Deploying application..."
+          
+          # Extract files
+          cd /home/ubuntu
+          rm -rf flowgrid-deploy
+          mkdir -p flowgrid-deploy
+          tar -xzf deploy.tar.gz -C flowgrid-deploy
           
           # Get EC2 IP
           EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
@@ -64,30 +70,30 @@ jobs:
           echo "📦 Deploying frontend..."
           sudo rm -rf /var/www/flowgrid
           sudo mkdir -p /var/www/flowgrid
-          sudo cp -r /home/ubuntu/flowgrid-deploy/dist/* /var/www/flowgrid/
+          sudo cp -r flowgrid-deploy/dist/* /var/www/flowgrid/
           sudo chown -R www-data:www-data /var/www/flowgrid
           
           # Deploy Backend
           echo "📦 Deploying backend..."
           mkdir -p /home/ubuntu/flowgrid/server
-          cp -r /home/ubuntu/flowgrid-deploy/server/dist /home/ubuntu/flowgrid/server/
-          cp /home/ubuntu/flowgrid-deploy/server/package*.json /home/ubuntu/flowgrid/server/
+          cp -r flowgrid-deploy/server/dist /home/ubuntu/flowgrid/server/
+          cp flowgrid-deploy/server/package*.json /home/ubuntu/flowgrid/server/
           
           cd /home/ubuntu/flowgrid/server
           
-          # Install production dependencies only
+          # Install production dependencies
           npm ci --production
           
           # Create/Update .env
           if [ ! -f .env ]; then
             JWT_SECRET=$(openssl rand -base64 32)
             cat > .env << EOF
-          PORT=5000
-          MONGODB_URI=${{ secrets.MONGODB_URI }}
-          JWT_SECRET=${JWT_SECRET}
-          NODE_ENV=production
-          CORS_ORIGIN=http://${EC2_IP}
-          EOF
+        PORT=5000
+        MONGODB_URI=${{ secrets.MONGODB_URI }}
+        JWT_SECRET=${JWT_SECRET}
+        NODE_ENV=production
+        CORS_ORIGIN=http://${EC2_IP}
+        EOF
           fi
           
           # Restart services
@@ -107,3 +113,4 @@ jobs:
           
           pm2 status
           curl -f http://localhost/api/health || echo "⚠️ Health check failed"
+        ENDSSH
