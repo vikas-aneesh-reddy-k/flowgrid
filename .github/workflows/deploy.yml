@@ -33,42 +33,23 @@ jobs:
         npm ci
         npm run build
 
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.AWS_EC2_HOST }}
-        username: ${{ secrets.AWS_EC2_USER }}
-        key: ${{ secrets.AWS_SSH_KEY }}
-        script_stop: false
-        script: |
-          set -e
-          cd ~
-          
-          # Get EC2 IP
-          EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-          
-          # Create temp directory
-          mkdir -p /tmp/flowgrid-deploy
-          
-    - name: Copy Frontend Build
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.AWS_EC2_HOST }}
-        username: ${{ secrets.AWS_EC2_USER }}
-        key: ${{ secrets.AWS_SSH_KEY }}
-        source: "dist/*"
-        target: "/tmp/flowgrid-deploy/"
-        strip_components: 0
+    - name: Create Deployment Package
+      run: |
+        mkdir -p deploy-package/frontend
+        mkdir -p deploy-package/backend
+        cp -r dist/* deploy-package/frontend/
+        cp -r server/dist deploy-package/backend/
+        cp server/package*.json deploy-package/backend/
+        tar -czf deploy.tar.gz deploy-package/
 
-    - name: Copy Backend Build
+    - name: Copy to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.AWS_EC2_HOST }}
         username: ${{ secrets.AWS_EC2_USER }}
         key: ${{ secrets.AWS_SSH_KEY }}
-        source: "server/dist/*,server/package.json,server/package-lock.json"
-        target: "/tmp/flowgrid-deploy/"
-        strip_components: 0
+        source: "deploy.tar.gz"
+        target: "/home/ubuntu/"
 
     - name: Deploy and Restart
       uses: appleboy/ssh-action@v1.0.3
@@ -79,19 +60,23 @@ jobs:
         script: |
           set -e
           
+          # Extract deployment package
+          cd /home/ubuntu
+          tar -xzf deploy.tar.gz
+          
           # Get EC2 IP
           EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           
           # Deploy Frontend
           sudo rm -rf /var/www/flowgrid
           sudo mkdir -p /var/www/flowgrid
-          sudo cp -r /tmp/flowgrid-deploy/dist/* /var/www/flowgrid/
+          sudo cp -r deploy-package/frontend/* /var/www/flowgrid/
           sudo chown -R www-data:www-data /var/www/flowgrid
           
           # Deploy Backend
           mkdir -p ~/flowgrid/server
-          cp -r /tmp/flowgrid-deploy/server/dist ~/flowgrid/server/
-          cp /tmp/flowgrid-deploy/server/package*.json ~/flowgrid/server/
+          cp -r deploy-package/backend/dist ~/flowgrid/server/
+          cp deploy-package/backend/package*.json ~/flowgrid/server/
           
           cd ~/flowgrid/server
           npm ci --production
@@ -116,7 +101,7 @@ jobs:
           sudo systemctl restart nginx
           
           # Cleanup
-          rm -rf /tmp/flowgrid-deploy
+          rm -rf /home/ubuntu/deploy-package /home/ubuntu/deploy.tar.gz
           
           echo "✅ Deployed to http://${EC2_IP}"
           pm2 status
