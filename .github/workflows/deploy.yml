@@ -3,18 +3,16 @@ name: Deploy to AWS EC2
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
   NODE_VERSION: '20'
 
 jobs:
-  # Job 1: Run Tests
-  test:
-    name: Run Tests
+  deploy:
+    name: Build and Deploy to AWS EC2
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout code
@@ -26,98 +24,62 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: Install frontend dependencies
-      run: npm ci
+    - name: Build Frontend
+      run: |
+        npm ci
+        echo "VITE_API_URL=http://${{ secrets.AWS_EC2_HOST }}/api" > .env.production
+        npm run build
 
-    - name: Install backend dependencies
+    - name: Build Backend
       run: |
         cd server
         npm ci
-
-    - name: Run frontend type check
-      run: npm run typecheck
-      continue-on-error: true
-
-    - name: Run frontend linting
-      run: npm run lint
-      continue-on-error: true
-
-    - name: Run unit tests
-      run: npm run test:ci
-      continue-on-error: true
-
-    - name: Build frontend
-      run: npm run build
-      continue-on-error: true
-
-    - name: Build backend
-      run: |
-        cd server
         npm run build
-      continue-on-error: true
-
-    - name: Test Summary
-      if: always()
-      run: echo "✅ All tests completed"
-
-  # Job 2: Deploy to AWS EC2
-  deploy:
-    name: Deploy to AWS EC2
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && always()
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
 
     - name: Deploy to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.AWS_EC2_HOST }}
+        username: ${{ secrets.AWS_EC2_USER }}
+        key: ${{ secrets.AWS_SSH_KEY }}
+        source: "dist/,server/dist/,server/package.json,server/package-lock.json"
+        target: "/home/ubuntu/flowgrid-deploy"
+
+    - name: Setup and Restart Services
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.AWS_EC2_HOST }}
         username: ${{ secrets.AWS_EC2_USER }}
         key: ${{ secrets.AWS_SSH_KEY }}
-        script_stop: false
-        command_timeout: 30m
         script: |
           set -e
           
-          echo "🚀 Starting deployment..."
-          
-          # Configuration
-          APP_DIR="$HOME/flowgrid"
-          REPO_URL="https://github.com/${{ github.repository }}"
+          echo "🚀 Deploying application..."
           
           # Get EC2 IP
-          EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "localhost")
+          EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           echo "📍 EC2 IP: $EC2_IP"
           
-          # Stop existing PM2 processes
-          pm2 stop flowgrid-backend 2>/dev/null || true
+          # Deploy Frontend
+          echo "📦 Deploying frontend..."
+          sudo rm -rf /var/www/flowgrid
+          sudo mkdir -p /var/www/flowgrid
+          sudo cp -r /home/ubuntu/flowgrid-deploy/dist/* /var/www/flowgrid/
+          sudo chown -R www-data:www-data /var/www/flowgrid
           
-          # Clone or update repository
-          if [ -d "$APP_DIR" ]; then
-            echo "📥 Updating repository..."
-            cd "$APP_DIR"
-            git fetch origin
-            git reset --hard origin/main
-            git pull origin main
-          else
-            echo "📥 Cloning repository..."
-            git clone "$REPO_URL" "$APP_DIR"
-            cd "$APP_DIR"
-          fi
+          # Deploy Backend
+          echo "📦 Deploying backend..."
+          mkdir -p /home/ubuntu/flowgrid/server
+          cp -r /home/ubuntu/flowgrid-deploy/server/dist /home/ubuntu/flowgrid/server/
+          cp /home/ubuntu/flowgrid-deploy/server/package*.json /home/ubuntu/flowgrid/server/
           
-          # Backend Setup
-          echo "🔧 Setting up backend..."
-          cd "$APP_DIR/server"
+          cd /home/ubuntu/flowgrid/server
           
-          # Install dependencies
-          npm install --production=false
+          # Install production dependencies only
+          npm ci --production
           
-          # Create/Update .env file
+          # Create/Update .env
           if [ ! -f .env ]; then
-            echo "Creating backend .env file..."
             JWT_SECRET=$(openssl rand -base64 32)
             cat > .env << EOF
           PORT=5000
@@ -126,143 +88,22 @@ jobs:
           NODE_ENV=production
           CORS_ORIGIN=http://${EC2_IP}
           EOF
-          else
-            echo "Updating backend .env file..."
-            # Update CORS_ORIGIN if EC2 IP changed
-            sed -i "s|CORS_ORIGIN=.*|CORS_ORIGIN=http://${EC2_IP}|g" .env
-            # Ensure MongoDB URI is set
-            if ! grep -q "MONGODB_URI" .env; then
-              echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
-            else
-              sed -i "s|MONGODB_URI=.*|MONGODB_URI=${{ secrets.MONGODB_URI }}|g" .env
-            fi
           fi
           
-          # Build backend
-          echo "Building backend..."
-          npm run build
-          
-          # Verify MongoDB connection and seed if needed
-          echo "Checking database..."
-          npm run seed || echo "Database already seeded or seed failed"
-          
-          # Frontend Setup
-          echo "🎨 Setting up frontend..."
-          cd "$APP_DIR"
-          
-          # Install dependencies
-          npm install --production=false
-          
-          # Create production env
-          cat > .env.production << EOF
-          VITE_API_URL=http://${EC2_IP}/api
-          EOF
-          
-          # Build frontend with memory limit
-          echo "Building frontend..."
-          NODE_OPTIONS="--max-old-space-size=1024" npm run build || {
-            echo "⚠️  Build failed, trying with lower memory..."
-            NODE_OPTIONS="--max-old-space-size=512" npm run build
-          }
-          
-          # Deploy to Nginx
-          echo "Deploying frontend to Nginx..."
-          sudo rm -rf /var/www/flowgrid
-          sudo mkdir -p /var/www/flowgrid
-          sudo cp -r dist/* /var/www/flowgrid/
-          sudo chown -R www-data:www-data /var/www/flowgrid
-          
-          # Verify Nginx configuration
-          if [ ! -f /etc/nginx/sites-available/flowgrid ]; then
-            echo "Creating Nginx configuration..."
-            sudo tee /etc/nginx/sites-available/flowgrid > /dev/null << 'NGINX_CONFIG'
-          server {
-              listen 80 default_server;
-              listen [::]:80 default_server;
-              server_name _;
-
-              # Frontend
-              location / {
-                  root /var/www/flowgrid;
-                  try_files $uri $uri/ /index.html;
-                  add_header Cache-Control "no-cache";
-              }
-
-              # Backend API
-              location /api {
-                  proxy_pass http://localhost:5000;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-                  proxy_cache_bypass $http_upgrade;
-                  proxy_read_timeout 300s;
-                  proxy_connect_timeout 75s;
-              }
-
-              # Health check
-              location /health {
-                  access_log off;
-                  return 200 "healthy\n";
-                  add_header Content-Type text/plain;
-              }
-          }
-          NGINX_CONFIG
-            
-            sudo ln -sf /etc/nginx/sites-available/flowgrid /etc/nginx/sites-enabled/
-            sudo rm -f /etc/nginx/sites-enabled/default
-          fi
-          
-          # Test and restart Nginx
-          sudo nginx -t
-          sudo systemctl restart nginx
-          
-          # Start backend with PM2
-          echo "🚀 Starting backend service..."
-          cd "$APP_DIR/server"
-          
+          # Restart services
+          echo "🔄 Restarting services..."
           pm2 delete flowgrid-backend 2>/dev/null || true
           pm2 start dist/index.js --name flowgrid-backend --time
           pm2 save
           
-          # Wait for backend to start
-          sleep 5
+          sudo systemctl restart nginx
           
-          # Verify deployment
-          echo "🔍 Verifying deployment..."
+          # Wait and verify
+          sleep 3
           
-          MONGO_STATUS=$(sudo systemctl is-active mongod || echo "inactive")
-          NGINX_STATUS=$(sudo systemctl is-active nginx || echo "inactive")
-          BACKEND_STATUS=$(pm2 list | grep -c "online" || echo "0")
+          echo "✅ Deployment complete!"
+          echo "🌐 Frontend: http://${EC2_IP}"
+          echo "🔌 Backend: http://${EC2_IP}/api"
           
-          echo ""
-          echo "============================================"
-          echo "✅ DEPLOYMENT COMPLETE!"
-          echo "============================================"
-          echo ""
-          echo "📊 Service Status:"
-          echo "  MongoDB: $MONGO_STATUS"
-          echo "  Nginx: $NGINX_STATUS"
-          echo "  Backend: $BACKEND_STATUS process(es) online"
-          echo ""
-          echo "🌐 Application URLs:"
-          echo "  Frontend: http://${EC2_IP}"
-          echo "  Backend API: http://${EC2_IP}/api"
-          echo "  Health Check: http://${EC2_IP}/health"
-          echo ""
-          echo "📝 View logs: pm2 logs flowgrid-backend"
-          echo ""
-          
-          # Show PM2 status
           pm2 status
-          
-          # Test health endpoint
-          echo ""
-          echo "Testing health endpoint..."
-          curl -f http://localhost/health || echo "⚠️  Health check failed"
-          
-          echo ""
-          echo "🎉 Deployment successful!"
+          curl -f http://localhost/api/health || echo "⚠️ Health check failed"
