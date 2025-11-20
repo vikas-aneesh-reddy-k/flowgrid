@@ -1,4 +1,4 @@
-name: Deploy to AWS EC2
+name: 🚀 Deploy to AWS EC2 (MAIN)
 
 on:
   push:
@@ -26,11 +26,16 @@ jobs:
           echo "🚀 Starting deployment..."
           
           # Navigate to app directory
-          cd /home/ubuntu/flowgrid
+          cd /home/ubuntu/flowgrid || mkdir -p /home/ubuntu/flowgrid && cd /home/ubuntu/flowgrid
           
           # Pull latest code
           echo "📥 Pulling latest code..."
-          git pull origin main || git clone ${{ secrets.REPO_URL }} .
+          if [ -d ".git" ]; then
+            git fetch origin main
+            git reset --hard origin/main
+          else
+            git clone ${{ secrets.REPO_URL }} .
+          fi
           
           # Update environment variables
           echo "⚙️ Updating environment..."

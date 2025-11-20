@@ -1,8 +1,6 @@
-name: Deploy to EC2 with Docker
+name: Deploy to EC2 with Docker (BACKUP)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -30,7 +28,8 @@ jobs:
           # Clone or pull latest code
           if [ -d ".git" ]; then
             echo "📥 Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
           else
             echo "📥 Cloning repository..."
             git clone ${{ secrets.REPO_URL }} .
