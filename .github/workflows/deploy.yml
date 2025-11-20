@@ -8,63 +8,58 @@ on:
 jobs:
   deploy:
     name: Deploy to EC2
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Deploy Application
-      run: |
-        set -e
-        
-        echo "🚀 Starting deployment..."
-        
-        # Get EC2 IP
-        EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-        
-        # Build and deploy frontend
-        echo "🎨 Building frontend..."
-        npm install
-        echo "VITE_API_URL=http://${EC2_IP}/api" > .env.production
-        npm run build
-        
-        echo "📦 Deploying frontend..."
-        sudo rm -rf /var/www/flowgrid
-        sudo mkdir -p /var/www/flowgrid
-        sudo cp -r dist/* /var/www/flowgrid/
-        sudo chown -R www-data:www-data /var/www/flowgrid
-        
-        # Build and deploy backend
-        echo "🔧 Building backend..."
-        cd server
-        npm install
-        npm run build
-        
-        # Update backend .env
-        if [ ! -f .env ]; then
-          JWT_SECRET=$(openssl rand -base64 32)
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          set -e
+          
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to app directory
+          cd /home/ubuntu/flowgrid
+          
+          # Pull latest code
+          echo "📥 Pulling latest code..."
+          git pull origin main || git clone ${{ secrets.REPO_URL }} .
+          
+          # Update environment variables
+          echo "⚙️ Updating environment..."
           cat > .env << EOF
-        PORT=5000
-        MONGODB_URI=${{ secrets.MONGODB_URI }}
-        JWT_SECRET=${JWT_SECRET}
-        NODE_ENV=production
-        CORS_ORIGIN=http://${EC2_IP}
-        EOF
-        fi
-        
-        # Restart services
-        echo "🔄 Restarting services..."
-        pm2 restart flowgrid-backend || pm2 start dist/index.js --name flowgrid-backend
-        pm2 save
-        
-        sudo systemctl restart nginx
-        
-        # Verify
-        sleep 3
-        echo ""
-        echo "✅ Deployment complete!"
-        echo "🌐 Application: http://${EC2_IP}"
-        echo ""
-        pm2 status
-        curl -f http://localhost/api/health || echo "⚠️ Health check failed"
+          MONGO_USER=admin
+          MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+          MONGODB_URI=mongodb://admin:${{ secrets.MONGO_PASSWORD }}@mongodb:27017/flowgrid?authSource=admin
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          NODE_ENV=production
+          PORT=5000
+          CORS_ORIGIN=*
+          VITE_API_URL=http://${{ secrets.EC2_HOST }}/api
+          EOF
+          
+          # Build and restart containers
+          echo "🐳 Building and starting Docker containers..."
+          docker-compose down
+          docker-compose up --build -d
+          
+          # Wait for services to be ready
+          echo "⏳ Waiting for services..."
+          sleep 15
+          
+          # Health check
+          echo "🏥 Running health check..."
+          curl -f http://localhost/api/health || echo "⚠️ Health check failed"
+          
+          # Show status
+          echo ""
+          echo "✅ Deployment complete!"
+          echo "🌐 Application: http://${{ secrets.EC2_HOST }}"
+          docker ps
