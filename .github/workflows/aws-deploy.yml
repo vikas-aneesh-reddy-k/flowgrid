@@ -1,29 +1,20 @@
 name: Deploy to AWS EC2
 
 on:
-  # Temporarily disabled - use manual deployment
-  # push:
-  #   branches: [ main ]
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy to AWS EC2
+  deploy:
+    name: Deploy to AWS EC2
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
-        cache: npm
-    
-    # Skip local build - build will happen on EC2 server
-    
-    - name: Deploy to EC2 via SSH
+    - name: Deploy to EC2
       env:
         AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
         AWS_EC2_USER: ${{ secrets.AWS_EC2_USER }}
@@ -33,97 +24,19 @@ jobs:
         mkdir -p ~/.ssh
         echo "$AWS_SSH_KEY" > ~/.ssh/deploy_key
         chmod 600 ~/.ssh/deploy_key
-        ssh-keyscan -H $AWS_EC2_HOST >> ~/.ssh/known_hosts
+        ssh-keyscan -H $AWS_EC2_HOST >> ~/.ssh/known_hosts 2>/dev/null
         
-        # Deploy to EC2
-        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $AWS_EC2_USER@$AWS_EC2_HOST << 'ENDSSH'
-          set -e
-          
-          # Configuration
-          APP_DIR="$HOME/flowgrid"
-          
-          echo "🚀 Starting deployment..."
-          
-          # Check if required tools are installed
-          if ! command -v node &> /dev/null; then
-            echo "❌ Node.js is not installed. Please run setup-ec2.sh first!"
-            exit 1
-          fi
-          
-          if ! command -v pm2 &> /dev/null; then
-            echo "❌ PM2 is not installed. Please run setup-ec2.sh first!"
-            exit 1
-          fi
-          
-          # Stop existing services
-          echo "Stopping existing services..."
-          pm2 stop flowgrid-backend 2>/dev/null || true
-          
-          # Update code
-          if [ -d "$APP_DIR" ]; then
-            echo "Updating repository..."
-            cd "$APP_DIR"
-            git fetch origin
-            git reset --hard origin/main
-            git pull origin main
-          else
-            echo "Cloning repository..."
-            git clone https://github.com/${{ github.repository }}.git "$APP_DIR"
-            cd "$APP_DIR"
-          fi
-          
-          # Install dependencies
-          echo "Installing dependencies..."
-          npm install
-          cd server
-          npm install
-          cd ..
-          
-          # Build applications
-          echo "Building applications..."
-          
-          # Get EC2 public IP
-          EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-          
-          # Create production env file
-          cat > .env.production << EOF
-        VITE_API_URL=http://${EC2_IP}/api
-        EOF
-          
-          npm run build
-          
-          cd server
-          npm run build
-          cd ..
-          
-          # Setup environment if not exists
-          if [ ! -f "server/.env" ]; then
-            echo "Creating environment file..."
-            cat > server/.env << EOF
-        PORT=5000
-        MONGODB_URI=mongodb://localhost:27017/flowgrid
-        JWT_SECRET=$(openssl rand -base64 32)
-        NODE_ENV=production
-        CORS_ORIGIN=http://${EC2_IP}
-        EOF
-          fi
-          
-          # Deploy frontend
-          echo "Deploying frontend..."
-          sudo mkdir -p /var/www/flowgrid
-          sudo cp -r dist/* /var/www/flowgrid/
-          sudo chown -R www-data:www-data /var/www/flowgrid
-          
-          # Start backend
-          echo "Starting backend service..."
-          cd server
-          pm2 start dist/index.js --name flowgrid-backend 2>/dev/null || pm2 restart flowgrid-backend
-          pm2 save
-          cd ..
-          
-          echo "✅ Deployment completed successfully!"
-          pm2 status flowgrid-backend
+        echo "🚀 Deploying to EC2..."
+        
+        # Deploy using the complete deployment script
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 $AWS_EC2_USER@$AWS_EC2_HOST 'bash -s' << 'ENDSSH'
+          # Download and run complete deployment script
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/deploy-complete.sh -o /tmp/deploy-complete.sh
+          chmod +x /tmp/deploy-complete.sh
+          /tmp/deploy-complete.sh
         ENDSSH
         
-        echo "✅ Deployment to EC2 completed!"
-        echo "🌐 Application URL: http://$AWS_EC2_HOST"
+        echo ""
+        echo "✅ Deployment completed!"
+        echo "🌐 Application: http://$AWS_EC2_HOST"
+        echo "🔌 API: http://$AWS_EC2_HOST/api"
