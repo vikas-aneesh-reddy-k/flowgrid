@@ -25,6 +25,22 @@ jobs:
           
           echo "🚀 Starting deployment..."
           
+          # Check and install Docker if needed
+          if ! command -v docker &> /dev/null; then
+            echo "📦 Installing Docker..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker ubuntu
+            rm get-docker.sh
+          fi
+          
+          # Check and install Docker Compose if needed
+          if ! command -v docker-compose &> /dev/null; then
+            echo "📦 Installing Docker Compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
           # Navigate to app directory
           cd /home/ubuntu/flowgrid || mkdir -p /home/ubuntu/flowgrid && cd /home/ubuntu/flowgrid
           
@@ -52,16 +68,24 @@ jobs:
           
           # Build and restart containers
           echo "🐳 Building and starting Docker containers..."
-          docker-compose down
-          docker-compose up --build -d
+          /usr/local/bin/docker-compose down || docker compose down || true
+          /usr/local/bin/docker-compose up --build -d || docker compose up --build -d
           
           # Wait for services to be ready
           echo "⏳ Waiting for services..."
-          sleep 15
+          sleep 20
           
           # Health check
           echo "🏥 Running health check..."
-          curl -f http://localhost/api/health || echo "⚠️ Health check failed"
+          for i in {1..5}; do
+            if curl -f http://localhost/api/health; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "⏳ Waiting for services... attempt $i/5"
+              sleep 5
+            fi
+          done
           
           # Show status
           echo ""
