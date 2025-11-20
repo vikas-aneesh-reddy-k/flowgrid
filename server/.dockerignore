@@ -11,5 +11,3 @@ coverage
 tests
 *.test.ts
 *.test.js
-src
-tsconfig.json
