@@ -1,8 +1,6 @@
-name: 🚀 Deploy to AWS EC2 (MAIN)
+name: 🚀 Deploy to AWS EC2 (OLD - DISABLED)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -68,8 +66,13 @@ jobs:
           
           # Build and restart containers
           echo "🐳 Building and starting Docker containers..."
-          /usr/local/bin/docker-compose down || docker compose down || true
-          /usr/local/bin/docker-compose up --build -d || docker compose up --build -d
+          
+          # Use docker compose (newer command) with longer timeout
+          export COMPOSE_HTTP_TIMEOUT=600
+          export DOCKER_CLIENT_TIMEOUT=600
+          
+          docker compose down || /usr/local/bin/docker-compose down || true
+          docker compose up --build -d || /usr/local/bin/docker-compose up --build -d
           
           # Wait for services to be ready
           echo "⏳ Waiting for services..."

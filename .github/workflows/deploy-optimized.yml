@@ -1,0 +1,120 @@
+name: 🚀 Deploy to EC2 (Optimized)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build images locally (GitHub has more resources)
+      run: |
+        echo "🔨 Building Docker images on GitHub Actions..."
+        
+        # Get EC2 IP for frontend build arg
+        EC2_IP="${{ secrets.EC2_HOST }}"
+        
+        # Build backend
+        docker build -t flowgrid-backend:latest -f server/Dockerfile ./server
+        
+        # Build frontend with API URL
+        docker build --build-arg VITE_API_URL=http://${EC2_IP}/api -t flowgrid-frontend:latest -f Dockerfile.frontend .
+        
+        # Save images to tar files
+        docker save flowgrid-backend:latest | gzip > backend.tar.gz
+        docker save flowgrid-frontend:latest | gzip > frontend.tar.gz
+    
+    - name: Copy images to EC2
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "backend.tar.gz,frontend.tar.gz"
+        target: "/home/ubuntu/flowgrid-images"
+    
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          set -e
+          
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to app directory
+          cd /home/ubuntu/flowgrid || mkdir -p /home/ubuntu/flowgrid && cd /home/ubuntu/flowgrid
+          
+          # Pull latest code
+          echo "📥 Pulling latest code..."
+          if [ -d ".git" ]; then
+            git fetch origin main
+            git reset --hard origin/main
+          else
+            git clone ${{ secrets.REPO_URL }} .
+          fi
+          
+          # Load Docker images
+          echo "📦 Loading Docker images..."
+          cd /home/ubuntu/flowgrid-images
+          docker load < backend.tar.gz
+          docker load < frontend.tar.gz
+          
+          # Clean up image files
+          rm -f backend.tar.gz frontend.tar.gz
+          
+          # Go back to app directory
+          cd /home/ubuntu/flowgrid
+          
+          # Create/update .env file
+          cat > .env << EOF
+          MONGO_USER=admin
+          MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+          MONGODB_URI=mongodb://admin:${{ secrets.MONGO_PASSWORD }}@mongodb:27017/flowgrid?authSource=admin
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          NODE_ENV=production
+          PORT=5000
+          CORS_ORIGIN=*
+          VITE_API_URL=http://${{ secrets.EC2_HOST }}/api
+          EOF
+          
+          # Stop old containers
+          echo "🛑 Stopping old containers..."
+          docker compose down || docker-compose down || true
+          
+          # Start new containers (no build needed - using loaded images)
+          echo "🚀 Starting containers..."
+          docker compose up -d || docker-compose up -d
+          
+          # Wait for services
+          echo "⏳ Waiting for services..."
+          sleep 20
+          
+          # Health check
+          echo "🏥 Running health check..."
+          for i in {1..10}; do
+            if curl -f http://localhost/api/health; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "⏳ Waiting for services... attempt $i/10"
+              sleep 5
+            fi
+          done
+          
+          # Show status
+          echo ""
+          echo "✅ Deployment complete!"
+          echo "🌐 Application: http://${{ secrets.EC2_HOST }}"
+          docker ps
