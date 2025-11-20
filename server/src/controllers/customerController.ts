@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Customer } from '../models/Customer.js';
 
-export const getCustomers = async (req: Request, res: Response): Promise<void> => {
+export const getCustomers = async (req: Request, res: Response) => {
   try {
     const { search, status, segment, page = 1, limit = 50 } = req.query;
     
@@ -40,7 +40,7 @@ export const getCustomers = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const getCustomer = async (req: Request, res: Response): Promise<void> => {
+export const getCustomer = async (req: Request, res: Response) => {
   try {
     const customer = await Customer.findById(req.params.id);
     
@@ -57,7 +57,7 @@ export const getCustomer = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const createCustomer = async (req: Request, res: Response): Promise<void> => {
+export const createCustomer = async (req: Request, res: Response) => {
   try {
     const customer = await Customer.create(req.body);
 
@@ -70,7 +70,7 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const updateCustomer = async (req: Request, res: Response): Promise<void> => {
+export const updateCustomer = async (req: Request, res: Response) => {
   try {
     const customer = await Customer.findByIdAndUpdate(
       req.params.id,
@@ -91,7 +91,7 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const deleteCustomer = async (req: Request, res: Response): Promise<void> => {
+export const deleteCustomer = async (req: Request, res: Response) => {
   try {
     const customer = await Customer.findByIdAndDelete(req.params.id);
 

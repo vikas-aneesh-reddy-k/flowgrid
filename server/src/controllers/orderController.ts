@@ -4,7 +4,7 @@ import { Product } from '../models/Product.js';
 import { Customer } from '../models/Customer.js';
 import { AuthRequest } from '../middleware/auth.js';
 
-export const getOrders = async (req: Request, res: Response): Promise<void> => {
+export const getOrders = async (req: Request, res: Response) => {
   try {
     const { status, customerId, page = 1, limit = 50 } = req.query;
     
@@ -37,7 +37,7 @@ export const getOrders = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getOrder = async (req: Request, res: Response): Promise<void> => {
+export const getOrder = async (req: Request, res: Response) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('customerId')
@@ -56,7 +56,7 @@ export const getOrder = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const createOrder = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     const { customerId, orderItems, shippingAddress } = req.body;
 
@@ -141,7 +141,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-export const updateOrder = async (req: Request, res: Response): Promise<void> => {
+export const updateOrder = async (req: Request, res: Response) => {
   try {
     const { status, deliveryDate } = req.body;
     
@@ -164,7 +164,7 @@ export const updateOrder = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const updateInvoiceStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateInvoiceStatus = async (req: Request, res: Response) => {
   try {
     const { status, paidDate, paymentMethod } = req.body;
     

@@ -10,7 +10,7 @@ const generateToken = (userId: string, email: string, role: string) => {
   );
 };
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name, role } = req.body;
 
@@ -43,7 +43,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -78,7 +78,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
+export const getProfile = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
     

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Employee } from '../models/Employee.js';
 import { User } from '../models/User.js';
 
-export const getEmployees = async (req: Request, res: Response): Promise<void> => {
+export const getEmployees = async (req: Request, res: Response) => {
   try {
     const { department, status, page = 1, limit = 50 } = req.query;
     
@@ -34,7 +34,7 @@ export const getEmployees = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const getEmployee = async (req: Request, res: Response): Promise<void> => {
+export const getEmployee = async (req: Request, res: Response) => {
   try {
     const employee = await Employee.findById(req.params.id)
       .populate('userId', 'email name role');
@@ -52,7 +52,7 @@ export const getEmployee = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const createEmployee = async (req: Request, res: Response): Promise<void> => {
+export const createEmployee = async (req: Request, res: Response) => {
   try {
     let { userId, name, email, ...employeeData } = req.body;
 
@@ -110,7 +110,7 @@ export const createEmployee = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const updateEmployee = async (req: Request, res: Response): Promise<void> => {
+export const updateEmployee = async (req: Request, res: Response) => {
   try {
     const employee = await Employee.findByIdAndUpdate(
       req.params.id,
@@ -131,7 +131,7 @@ export const updateEmployee = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const addPayroll = async (req: Request, res: Response): Promise<void> => {
+export const addPayroll = async (req: Request, res: Response) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
@@ -155,7 +155,7 @@ export const addPayroll = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const addLeaveRequest = async (req: Request, res: Response): Promise<void> => {
+export const addLeaveRequest = async (req: Request, res: Response) => {
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
@@ -179,7 +179,7 @@ export const addLeaveRequest = async (req: Request, res: Response): Promise<void
   }
 };
 
-export const updateLeaveRequest = async (req: Request, res: Response): Promise<void> => {
+export const updateLeaveRequest = async (req: Request, res: Response) => {
   try {
     const { leaveId } = req.params;
     const { status } = req.body;
@@ -204,7 +204,7 @@ export const updateLeaveRequest = async (req: Request, res: Response): Promise<v
   }
 };
 
-export const processPayroll = async (req: Request, res: Response): Promise<void> => {
+export const processPayroll = async (req: Request, res: Response) => {
   try {
     const { payPeriodStart, payPeriodEnd, employeeIds } = req.body;
 
