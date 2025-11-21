@@ -1,0 +1,145 @@
+name: FlowGrid CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_REGISTRY: vikaskakarla
+  FRONTEND_IMAGE: vikaskakarla/flowgrid-frontend
+  BACKEND_IMAGE: vikaskakarla/flowgrid-backend
+  EC2_HOST: 13.53.86.36
+  EC2_USER: ubuntu
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install frontend dependencies
+      run: npm ci
+      
+    - name: Install backend dependencies
+      run: |
+        cd server
+        npm ci
+        
+    - name: Run frontend linting
+      run: npm run lint
+      
+    - name: Run TypeScript type checking
+      run: npm run typecheck
+      
+    - name: Build frontend
+      run: |
+        export VITE_API_URL=http://${{ env.EC2_HOST }}:5000/api
+        npm run build
+        
+    - name: Build backend
+      run: |
+        cd server
+        npm run build
+        
+    - name: Run frontend tests
+      run: npm run test:unit
+      
+    - name: Run backend tests
+      run: |
+        cd server
+        npm test || true
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.frontend
+        push: true
+        tags: |
+          ${{ env.FRONTEND_IMAGE }}:latest
+          ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+        build-args: |
+          VITE_API_URL=http://${{ env.EC2_HOST }}:5000/api
+          
+    - name: Build and push backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./server
+        push: true
+        tags: |
+          ${{ env.BACKEND_IMAGE }}:latest
+          ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Update system
+          sudo apt-get update -y
+          
+          # Install Docker if not present
+          if ! command -v docker &> /dev/null; then
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker ubuntu
+          fi
+          
+          # Install Docker Compose if not present
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
+          # Create directories
+          mkdir -p /home/ubuntu/docker
+          
+          # Pull latest images
+          docker pull ${{ env.FRONTEND_IMAGE }}:latest
+          docker pull ${{ env.BACKEND_IMAGE }}:latest
+          
+          # Stop existing containers
+          docker-compose down || true
+          
+          # Start new deployment
+          docker-compose up -d
+          
+          # Clean up old images
+          docker image prune -f
+          
+    - name: Health Check
+      run: |
+        sleep 30
+        curl -f http://${{ env.EC2_HOST }} || exit 1
+        curl -f http://${{ env.EC2_HOST }}:5000/health || exit 1
+        echo "✅ All health checks passed!"

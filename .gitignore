@@ -12,18 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-.env.production
-
-# Sensitive files
-*.pem
-*.key
-.github-secrets-config.txt
-server/.env
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -34,3 +22,38 @@ server/.env
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Security keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# CI/CD and deployment
+setup-ec2-direct.sh
+.aws/
+deployment-logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Docker
+.dockerignore
+
+# Testing
+coverage
+.nyc_output
+
+# Build outputs
+build
+*.tsbuildinfo
+
+# OS
+Thumbs.db

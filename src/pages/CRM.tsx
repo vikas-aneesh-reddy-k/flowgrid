@@ -7,8 +7,83 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useCustomers, useCreateCustomer } from "@/hooks/useCustomers";
 
 export default function CRM() {
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerCompany, setCustomerCompany] = useState("");
+  const [customerSegment, setCustomerSegment] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+
+  // Use the actual hooks to fetch and create customers
+  const { data: customersData, isLoading } = useCustomers();
+  const createCustomer = useCreateCustomer();
+
+  const handleAddCustomer = () => {
+    setShowAddCustomerDialog(true);
+    toast.info("Add Customer", {
+      description: "Customer creation form opening...",
+    });
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!customerName || !customerEmail || !customerCompany) {
+      toast.error("Missing Information", {
+        description: "Please fill in all required fields (Name, Email, Company).",
+      });
+      return;
+    }
+
+    // Create customer data object matching the API structure
+    const customerData = {
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone || undefined,
+      company: customerCompany,
+      segment: customerSegment || "SMB", // Default to SMB if no segment selected
+      address: customerAddress ? {
+        street: customerAddress,
+        city: "N/A",
+        state: "N/A", 
+        zipCode: "N/A",
+      } : {
+        street: "N/A",
+        city: "N/A",
+        state: "N/A",
+        zipCode: "N/A",
+      },
+      status: 'active', // Set as active customer by default
+    };
+
+    // Use the mutation to create the customer
+    createCustomer.mutate(customerData, {
+      onSuccess: () => {
+        // Reset form and close dialog
+        setShowAddCustomerDialog(false);
+        setCustomerName("");
+        setCustomerEmail("");
+        setCustomerPhone("");
+        setCustomerCompany("");
+        setCustomerSegment("");
+        setCustomerAddress("");
+      },
+      onError: (error: any) => {
+        console.error("Failed to create customer:", error);
+      },
+    });
+  };
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -21,7 +96,10 @@ export default function CRM() {
             <Filter className="w-4 h-4 mr-2" />
             Filter
           </Button>
-          <Button className="bg-gradient-primary text-primary-foreground">
+          <Button 
+            className="bg-gradient-primary text-primary-foreground"
+            onClick={handleAddCustomer}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Customer
           </Button>
@@ -455,6 +533,99 @@ export default function CRM() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Customer Dialog */}
+      <Dialog open={showAddCustomerDialog} onOpenChange={setShowAddCustomerDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogDescription>
+              Add a new customer to your CRM database. Fill in the details below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Customer Name *</label>
+                <Input 
+                  placeholder="Enter customer name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email Address *</label>
+                <Input 
+                  type="email"
+                  placeholder="customer@company.com"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone Number</label>
+                <Input 
+                  placeholder="+1 (555) 123-4567"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Company Name *</label>
+                <Input 
+                  placeholder="Company Inc."
+                  value={customerCompany}
+                  onChange={(e) => setCustomerCompany(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Customer Segment</label>
+              <Select value={customerSegment} onValueChange={setCustomerSegment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer segment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Enterprise">Enterprise</SelectItem>
+                  <SelectItem value="SMB">Small & Medium Business</SelectItem>
+                  <SelectItem value="Startup">Startup</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Address</label>
+              <Input 
+                placeholder="123 Business St, City, State 12345"
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAddCustomerDialog(false)}
+                disabled={createCustomer.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="bg-gradient-primary text-primary-foreground"
+                onClick={handleCreateCustomer}
+                disabled={createCustomer.isPending}
+              >
+                {createCustomer.isPending ? "Creating..." : "Add Customer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

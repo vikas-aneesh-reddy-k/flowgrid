@@ -2,51 +2,105 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE_FRONTEND = "${env.DOCKER_HUB_USERNAME}/flowgrid-frontend"
-        DOCKER_IMAGE_BACKEND = "${env.DOCKER_HUB_USERNAME}/flowgrid-backend"
-        EC2_HOST = "${env.EC2_HOST}"
-        EC2_USER = "${env.EC2_USER}"
-        EC2_KEY = credentials('ec2-ssh-key')
-        MONGODB_URI = credentials('mongodb-uri')
+        DOCKER_REGISTRY = 'vikaskakarla'
+        FRONTEND_IMAGE = "${DOCKER_REGISTRY}/flowgrid-frontend"
+        BACKEND_IMAGE = "${DOCKER_REGISTRY}/flowgrid-backend"
+        BUILD_NUMBER = "${env.BUILD_NUMBER}"
+        GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+        
+        // EC2 Configuration
+        EC2_HOST = '13.53.86.36'
+        EC2_USER = 'ubuntu'
+        
+        // Docker Hub credentials
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        
+        // EC2 SSH Key
+        EC2_SSH_KEY = credentials('ec2-ssh-key')
+        
+        // Environment variables for deployment
+        MONGO_USER = credentials('mongo-user')
+        MONGO_PASSWORD = credentials('mongo-password')
         JWT_SECRET = credentials('jwt-secret')
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
     }
     
     stages {
         stage('Checkout') {
             steps {
-                echo '📥 Checking out code...'
+                echo 'Checking out source code...'
                 checkout scm
+                sh 'git clean -fdx'
             }
         }
         
-        stage('Build Docker Images') {
+        stage('Environment Setup') {
             parallel {
-                stage('Build Frontend') {
+                stage('Frontend Dependencies') {
                     steps {
-                        echo '🎨 Building Frontend Docker Image...'
-                        script {
-                            sh """
-                                docker build \
-                                    --build-arg VITE_API_URL=http://${EC2_HOST}/api \
-                                    -t ${DOCKER_IMAGE_FRONTEND}:${BUILD_NUMBER} \
-                                    -t ${DOCKER_IMAGE_FRONTEND}:latest \
-                                    -f Dockerfile.frontend .
-                            """
+                        echo 'Installing frontend dependencies...'
+                        sh 'npm ci'
+                    }
+                }
+                stage('Backend Dependencies') {
+                    steps {
+                        echo 'Installing backend dependencies...'
+                        dir('server') {
+                            sh 'npm ci'
                         }
                     }
                 }
-                
-                stage('Build Backend') {
+            }
+        }
+        
+        stage('Code Quality') {
+            parallel {
+                stage('Frontend Lint') {
                     steps {
-                        echo '🔧 Building Backend Docker Image...'
-                        script {
-                            sh """
-                                docker build \
-                                    -t ${DOCKER_IMAGE_BACKEND}:${BUILD_NUMBER} \
-                                    -t ${DOCKER_IMAGE_BACKEND}:latest \
-                                    -f server/Dockerfile ./server
-                            """
+                        echo 'Running frontend linting...'
+                        sh 'npm run lint'
+                    }
+                }
+                stage('Type Check') {
+                    steps {
+                        echo 'Running TypeScript type checking...'
+                        sh 'npm run typecheck'
+                    }
+                }
+                stage('Backend Type Check') {
+                    steps {
+                        echo 'Running backend TypeScript compilation...'
+                        dir('server') {
+                            sh 'npm run build'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Build Applications') {
+            parallel {
+                stage('Frontend Build') {
+                    steps {
+                        echo 'Building frontend application...'
+                        sh '''
+                            export VITE_API_URL=http://${EC2_HOST}:5000/api
+                            npm run build
+                        '''
+                        archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
+                    }
+                }
+                stage('Backend Build') {
+                    steps {
+                        echo 'Building backend application...'
+                        dir('server') {
+                            sh 'npm run build'
+                            archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
                         }
                     }
                 }
@@ -55,168 +109,238 @@ pipeline {
         
         stage('Run Tests') {
             parallel {
-                stage('Unit Tests') {
+                stage('Frontend Unit Tests') {
                     steps {
-                        echo '🧪 Running Unit Tests...'
-                        sh 'npm install && npm run test:unit || true'
+                        echo 'Running frontend unit tests...'
+                        sh 'npm run test:unit'
+                    }
+                    post {
+                        always {
+                            publishTestResults testResultsPattern: 'test-results.xml'
+                        }
                     }
                 }
-                
-                stage('Backend Health Check') {
+                stage('Backend Tests') {
                     steps {
-                        echo '🏥 Testing Backend Container...'
-                        script {
-                            sh """
-                                docker run -d --name test-backend \
-                                    -e MONGODB_URI=mongodb://test:test@localhost:27017/test \
-                                    -e JWT_SECRET=test-secret \
-                                    -e NODE_ENV=test \
-                                    ${DOCKER_IMAGE_BACKEND}:${BUILD_NUMBER}
-                                
-                                sleep 5
-                                docker logs test-backend
-                                docker stop test-backend
-                                docker rm test-backend
-                            """
+                        echo 'Running backend tests...'
+                        dir('server') {
+                            sh 'npm test || true'
                         }
                     }
                 }
             }
         }
         
-        stage('Push to Docker Hub') {
-            steps {
-                echo '📤 Pushing images to Docker Hub...'
-                script {
-                    sh """
-                        echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_CREDENTIALS_USR} --password-stdin
-                        
-                        docker push ${DOCKER_IMAGE_FRONTEND}:${BUILD_NUMBER}
-                        docker push ${DOCKER_IMAGE_FRONTEND}:latest
-                        
-                        docker push ${DOCKER_IMAGE_BACKEND}:${BUILD_NUMBER}
-                        docker push ${DOCKER_IMAGE_BACKEND}:latest
-                        
-                        docker logout
-                    """
+        stage('Security Scan') {
+            parallel {
+                stage('Frontend Security') {
+                    steps {
+                        echo 'Running frontend security audit...'
+                        sh 'npm audit --audit-level=high || true'
+                    }
+                }
+                stage('Backend Security') {
+                    steps {
+                        echo 'Running backend security audit...'
+                        dir('server') {
+                            sh 'npm audit --audit-level=high || true'
+                        }
+                    }
                 }
             }
         }
         
+        stage('Build Docker Images') {
+            parallel {
+                stage('Frontend Image') {
+                    steps {
+                        echo 'Building frontend Docker image...'
+                        script {
+                            def frontendImage = docker.build("${FRONTEND_IMAGE}:${BUILD_NUMBER}", 
+                                "--build-arg VITE_API_URL=http://${EC2_HOST}:5000/api -f Dockerfile.frontend .")
+                            
+                            // Tag with latest and git commit
+                            frontendImage.tag("latest")
+                            frontendImage.tag("${GIT_COMMIT_SHORT}")
+                        }
+                    }
+                }
+                stage('Backend Image') {
+                    steps {
+                        echo 'Building backend Docker image...'
+                        script {
+                            def backendImage = docker.build("${BACKEND_IMAGE}:${BUILD_NUMBER}", "./server")
+                            
+                            // Tag with latest and git commit
+                            backendImage.tag("latest")
+                            backendImage.tag("${GIT_COMMIT_SHORT}")
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Image Security Scan') {
+            parallel {
+                stage('Scan Frontend Image') {
+                    steps {
+                        echo 'Scanning frontend image for vulnerabilities...'
+                        sh '''
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                                aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL \
+                                ${FRONTEND_IMAGE}:${BUILD_NUMBER} || true
+                        '''
+                    }
+                }
+                stage('Scan Backend Image') {
+                    steps {
+                        echo 'Scanning backend image for vulnerabilities...'
+                        sh '''
+                            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                                aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL \
+                                ${BACKEND_IMAGE}:${BUILD_NUMBER} || true
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Push to Registry') {
+            steps {
+                echo 'Pushing images to Docker Hub...'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                        // Push frontend images
+                        sh "docker push ${FRONTEND_IMAGE}:${BUILD_NUMBER}"
+                        sh "docker push ${FRONTEND_IMAGE}:latest"
+                        sh "docker push ${FRONTEND_IMAGE}:${GIT_COMMIT_SHORT}"
+                        
+                        // Push backend images
+                        sh "docker push ${BACKEND_IMAGE}:${BUILD_NUMBER}"
+                        sh "docker push ${BACKEND_IMAGE}:latest"
+                        sh "docker push ${BACKEND_IMAGE}:${GIT_COMMIT_SHORT}"
+                    }
+                }
+            }
+        }
         stage('Deploy to EC2') {
             steps {
-                echo '🚀 Deploying to AWS EC2...'
+                echo 'Deploying to EC2 instance...'
                 script {
-                    sh """
-                        ssh -i ${EC2_KEY} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'ENDSSH'
-                            set -e
+                    sh '''
+                        # Copy deployment files to EC2
+                        scp -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no \
+                            docker-compose.yml ${EC2_USER}@${EC2_HOST}:/home/ubuntu/
+                        
+                        scp -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no \
+                            .env.production ${EC2_USER}@${EC2_HOST}:/home/ubuntu/.env
+                        
+                        scp -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no \
+                            docker/nginx.conf ${EC2_USER}@${EC2_HOST}:/home/ubuntu/
+                        
+                        scp -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no \
+                            docker/mongo-init.js ${EC2_USER}@${EC2_HOST}:/home/ubuntu/
+                        
+                        # Deploy on EC2
+                        ssh -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                            # Update system
+                            sudo apt-get update
                             
-                            echo "📥 Pulling latest images..."
-                            docker pull ${DOCKER_IMAGE_FRONTEND}:latest
-                            docker pull ${DOCKER_IMAGE_BACKEND}:latest
+                            # Install Docker if not present
+                            if ! command -v docker &> /dev/null; then
+                                curl -fsSL https://get.docker.com -o get-docker.sh
+                                sudo sh get-docker.sh
+                                sudo usermod -aG docker ubuntu
+                            fi
                             
-                            echo "🔄 Stopping old containers..."
-                            docker-compose -f /home/${EC2_USER}/flowgrid/docker-compose.yml down || true
+                            # Install Docker Compose if not present
+                            if ! command -v docker-compose &> /dev/null; then
+                                sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                                sudo chmod +x /usr/local/bin/docker-compose
+                            fi
                             
-                            echo "🚀 Starting new containers..."
-                            cd /home/${EC2_USER}/flowgrid
+                            # Create necessary directories
+                            mkdir -p /home/ubuntu/docker
                             
-                            # Update docker-compose.yml with new image tags
-                            cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
-services:
-  mongodb:
-    image: mongo:7.0
-    container_name: flowgrid-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_INITDB_DATABASE: flowgrid
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - flowgrid-network
-
-  backend:
-    image: ${DOCKER_IMAGE_BACKEND}:latest
-    container_name: flowgrid-backend
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: 5000
-      MONGODB_URI: ${MONGODB_URI}
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: "*"
-    ports:
-      - "5000:5000"
-    depends_on:
-      - mongodb
-    networks:
-      - flowgrid-network
-
-  frontend:
-    image: ${DOCKER_IMAGE_FRONTEND}:latest
-    container_name: flowgrid-frontend
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - flowgrid-network
-
-volumes:
-  mongodb_data:
-
-networks:
-  flowgrid-network:
-    driver: bridge
-EOF
+                            # Move files to correct locations
+                            mv /home/ubuntu/nginx.conf /home/ubuntu/docker/
+                            mv /home/ubuntu/mongo-init.js /home/ubuntu/docker/
                             
-                            # Start services
+                            # Pull latest images
+                            docker pull ${FRONTEND_IMAGE}:latest
+                            docker pull ${BACKEND_IMAGE}:latest
+                            
+                            # Stop existing containers
+                            docker-compose down || true
+                            
+                            # Start new deployment
                             docker-compose up -d
                             
-                            echo "⏳ Waiting for services to be healthy..."
-                            sleep 10
-                            
-                            echo "✅ Deployment complete!"
-                            docker-compose ps
-ENDSSH
-                    """
+                            # Clean up old images
+                            docker image prune -f
+                        '
+                    '''
                 }
             }
         }
         
         stage('Health Check') {
             steps {
-                echo '🏥 Running health checks...'
+                echo 'Performing post-deployment health checks...'
                 script {
-                    sh """
-                        sleep 5
-                        curl -f http://${EC2_HOST}/api/health || exit 1
-                        curl -f http://${EC2_HOST}/health || exit 1
-                        echo "✅ All health checks passed!"
-                    """
+                    sh '''
+                        # Wait for services to start
+                        sleep 30
+                        
+                        # Check frontend
+                        curl -f http://${EC2_HOST} || exit 1
+                        
+                        # Check backend API
+                        curl -f http://${EC2_HOST}:5000/health || exit 1
+                        
+                        echo "All health checks passed!"
+                    '''
                 }
             }
         }
     }
     
     post {
+        always {
+            echo 'Cleaning up workspace...'
+            sh 'docker system prune -f || true'
+            cleanWs()
+        }
         success {
-            echo '✅ Deployment successful!'
-            echo "🌐 Application URL: http://${EC2_HOST}"
+            echo 'Pipeline completed successfully!'
+            emailext (
+                subject: "✅ Deployment Success - FlowGrid ${BUILD_NUMBER}",
+                body: """
+                    <h2>Deployment Successful</h2>
+                    <p><strong>Build:</strong> ${BUILD_NUMBER}</p>
+                    <p><strong>Commit:</strong> ${GIT_COMMIT_SHORT}</p>
+                    <p><strong>Branch:</strong> ${env.BRANCH_NAME}</p>
+                    <p><strong>Application URL:</strong> http://${EC2_HOST}</p>
+                    <p><strong>API URL:</strong> http://${EC2_HOST}:5000</p>
+                """,
+                to: "${env.CHANGE_AUTHOR_EMAIL}",
+                mimeType: 'text/html'
+            )
         }
         failure {
-            echo '❌ Deployment failed!'
-        }
-        always {
-            echo '🧹 Cleaning up...'
-            sh 'docker system prune -f || true'
+            echo 'Pipeline failed!'
+            emailext (
+                subject: "❌ Deployment Failed - FlowGrid ${BUILD_NUMBER}",
+                body: """
+                    <h2>Deployment Failed</h2>
+                    <p><strong>Build:</strong> ${BUILD_NUMBER}</p>
+                    <p><strong>Commit:</strong> ${GIT_COMMIT_SHORT}</p>
+                    <p><strong>Branch:</strong> ${env.BRANCH_NAME}</p>
+                    <p><strong>Console Output:</strong> ${BUILD_URL}console</p>
+                """,
+                to: "${env.CHANGE_AUTHOR_EMAIL}",
+                mimeType: 'text/html'
+            )
         }
     }
 }
