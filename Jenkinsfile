@@ -1,6 +1,10 @@
 pipeline {
     agent any
     
+    parameters {
+        booleanParam(name: 'DEPLOY_TO_EC2', defaultValue: false, description: 'Deploy to EC2 after successful build')
+    }
+    
     environment {
         DOCKER_REGISTRY = 'vikaskakarla'
         FRONTEND_IMAGE = "${DOCKER_REGISTRY}/flowgrid-frontend"
@@ -227,6 +231,11 @@ pipeline {
         }
         
         stage('Build Docker Images') {
+            when {
+                expression { 
+                    return env.DEPLOY_TO_EC2 == 'true' || params.DEPLOY_TO_EC2 == true
+                }
+            }
             steps {
                 echo 'Building Docker images...'
                 script {
@@ -262,6 +271,105 @@ pipeline {
                     } catch (Exception e) {
                         echo "⚠️ Docker build failed: ${e.getMessage()}"
                         echo "Continuing without Docker build..."
+                    }
+                }
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            when {
+                expression { 
+                    return env.DEPLOY_TO_EC2 == 'true' || params.DEPLOY_TO_EC2 == true
+                }
+            }
+            steps {
+                echo 'Pushing images to Docker Hub...'
+                script {
+                    try {
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            if (isUnix()) {
+                                sh '''
+                                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                                    docker push ${FRONTEND_IMAGE}:${BUILD_NUMBER}
+                                    docker push ${FRONTEND_IMAGE}:latest
+                                    docker push ${BACKEND_IMAGE}:${BUILD_NUMBER}
+                                    docker push ${BACKEND_IMAGE}:latest
+                                '''
+                            } else {
+                                bat '''
+                                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                                    docker push %FRONTEND_IMAGE%:%BUILD_NUMBER%
+                                    docker push %FRONTEND_IMAGE%:latest
+                                    docker push %BACKEND_IMAGE%:%BUILD_NUMBER%
+                                    docker push %BACKEND_IMAGE%:latest
+                                '''
+                            }
+                        }
+                        echo "✅ Images pushed to Docker Hub successfully"
+                    } catch (Exception e) {
+                        echo "⚠️ Docker push failed: ${e.getMessage()}"
+                        echo "Continuing without Docker push..."
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to EC2') {
+            when {
+                expression { 
+                    return env.DEPLOY_TO_EC2 == 'true' || params.DEPLOY_TO_EC2 == true
+                }
+            }
+            steps {
+                echo 'Deploying to EC2 instance...'
+                script {
+                    try {
+                        withCredentials([
+                            sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER'),
+                            string(credentialsId: 'mongo-user', variable: 'MONGO_USER'),
+                            string(credentialsId: 'mongo-password', variable: 'MONGO_PASSWORD'),
+                            string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET')
+                        ]) {
+                            // Copy deployment files
+                            if (isUnix()) {
+                                sh '''
+                                    scp -i $SSH_KEY -o StrictHostKeyChecking=no docker-compose.yml $SSH_USER@${EC2_HOST}:/home/ubuntu/
+                                    scp -i $SSH_KEY -o StrictHostKeyChecking=no .env.production $SSH_USER@${EC2_HOST}:/home/ubuntu/.env
+                                    scp -i $SSH_KEY -o StrictHostKeyChecking=no docker/nginx.conf $SSH_USER@${EC2_HOST}:/home/ubuntu/
+                                    scp -i $SSH_KEY -o StrictHostKeyChecking=no docker/mongo-init.js $SSH_USER@${EC2_HOST}:/home/ubuntu/
+                                '''
+                            } else {
+                                bat '''
+                                    scp -i %SSH_KEY% -o StrictHostKeyChecking=no docker-compose.yml %SSH_USER%@%EC2_HOST%:/home/ubuntu/
+                                    scp -i %SSH_KEY% -o StrictHostKeyChecking=no .env.production %SSH_USER%@%EC2_HOST%:/home/ubuntu/.env
+                                    scp -i %SSH_KEY% -o StrictHostKeyChecking=no docker/nginx.conf %SSH_USER%@%EC2_HOST%:/home/ubuntu/
+                                    scp -i %SSH_KEY% -o StrictHostKeyChecking=no docker/mongo-init.js %SSH_USER%@%EC2_HOST%:/home/ubuntu/
+                                '''
+                            }
+                            
+                            // Deploy on EC2
+                            if (isUnix()) {
+                                sh '''
+                                    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@${EC2_HOST} "
+                                        mkdir -p /home/ubuntu/docker
+                                        mv /home/ubuntu/nginx.conf /home/ubuntu/docker/ 2>/dev/null || true
+                                        mv /home/ubuntu/mongo-init.js /home/ubuntu/docker/ 2>/dev/null || true
+                                        docker-compose pull
+                                        docker-compose down || true
+                                        docker-compose up -d
+                                        docker system prune -f
+                                    "
+                                '''
+                            } else {
+                                bat '''
+                                    ssh -i %SSH_KEY% -o StrictHostKeyChecking=no %SSH_USER%@%EC2_HOST% "mkdir -p /home/ubuntu/docker && mv /home/ubuntu/nginx.conf /home/ubuntu/docker/ 2>/dev/null || true && mv /home/ubuntu/mongo-init.js /home/ubuntu/docker/ 2>/dev/null || true && docker-compose pull && docker-compose down || true && docker-compose up -d && docker system prune -f"
+                                '''
+                            }
+                        }
+                        echo "✅ Deployment to EC2 completed successfully"
+                    } catch (Exception e) {
+                        echo "⚠️ EC2 deployment failed: ${e.getMessage()}"
+                        echo "Check EC2 connectivity and credentials..."
                     }
                 }
             }
