@@ -232,8 +232,9 @@ pipeline {
         
         stage('Build Docker Images') {
             when {
-                expression { 
-                    return env.DEPLOY_TO_EC2 == 'true' || params.DEPLOY_TO_EC2 == true
+                anyOf {
+                    expression { return params.DEPLOY_TO_EC2 == true }
+                    expression { return env.BRANCH_NAME == 'main' || env.GIT_BRANCH == 'origin/main' }
                 }
             }
             steps {
@@ -278,8 +279,9 @@ pipeline {
         
         stage('Push to Docker Hub') {
             when {
-                expression { 
-                    return env.DEPLOY_TO_EC2 == 'true' || params.DEPLOY_TO_EC2 == true
+                anyOf {
+                    expression { return params.DEPLOY_TO_EC2 == true }
+                    expression { return env.BRANCH_NAME == 'main' || env.GIT_BRANCH == 'origin/main' }
                 }
             }
             steps {
@@ -316,8 +318,9 @@ pipeline {
         
         stage('Deploy to EC2') {
             when {
-                expression { 
-                    return env.DEPLOY_TO_EC2 == 'true' || params.DEPLOY_TO_EC2 == true
+                anyOf {
+                    expression { return params.DEPLOY_TO_EC2 == true }
+                    expression { return env.BRANCH_NAME == 'main' || env.GIT_BRANCH == 'origin/main' }
                 }
             }
             steps {
