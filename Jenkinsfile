@@ -371,7 +371,7 @@ pipeline {
                 echo "✅ Security scans completed"
                 echo "✅ Docker images built"
                 echo ""
-                echo "🚀 Ready for deployment!"
+                echo "🚀 Ready for automatic deployment!"
                 echo "📦 Frontend image: ${FRONTEND_IMAGE}:${BUILD_NUMBER}"
                 echo "📦 Backend image: ${BACKEND_IMAGE}:${BUILD_NUMBER}"
             }
