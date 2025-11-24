@@ -44,7 +44,7 @@ export default function Login() {
           <div className="mx-auto w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
             <Building2 className="w-6 h-6 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">FlowGrid</h1>
+          <h1 className="text-2xl font-bold text-foreground">FlowGrid1</h1>
           <p className="text-muted-foreground">Enterprise Resource Planning</p>
         </div>
 
