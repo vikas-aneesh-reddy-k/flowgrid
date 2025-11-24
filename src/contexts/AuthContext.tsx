@@ -116,12 +116,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         body: JSON.stringify({
           email: userData.email,
           password: userData.password,
-          name: `${userData.firstName} ${userData.lastName}`,
+          name: `${userData.firstName} ${userData.lastName}`.trim(),
           role: userData.role || 'sales_rep',
         }),
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Registration failed:', errorData);
         setIsLoading(false);
         return false;
       }
