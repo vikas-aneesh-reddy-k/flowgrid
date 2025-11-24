@@ -6,14 +6,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including dev dependencies for building)
+RUN npm ci
 
 # Copy source code
 COPY . .
 
 # Build TypeScript
 RUN npm run build
+
+# Install only production dependencies for final image
+RUN npm ci --only=production
 
 # Production stage
 FROM node:20-alpine
