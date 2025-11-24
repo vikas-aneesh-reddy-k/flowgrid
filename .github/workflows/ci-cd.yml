@@ -101,6 +101,15 @@ jobs:
           ${{ env.BACKEND_IMAGE }}:latest
           ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           
+    - name: Copy deployment files to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "docker-compose.yml,.env.production,docker/nginx.conf,docker/mongo-init.js"
+        target: "/home/ubuntu/"
+        
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -127,6 +136,11 @@ jobs:
           # Create directories
           mkdir -p /home/ubuntu/docker
           
+          # Move files to correct locations
+          mv /home/ubuntu/docker/nginx.conf /home/ubuntu/docker/ 2>/dev/null || true
+          mv /home/ubuntu/docker/mongo-init.js /home/ubuntu/docker/ 2>/dev/null || true
+          mv /home/ubuntu/.env.production /home/ubuntu/.env 2>/dev/null || true
+          
           # Pull latest images
           docker pull ${{ env.FRONTEND_IMAGE }}:latest
           docker pull ${{ env.BACKEND_IMAGE }}:latest
@@ -134,8 +148,20 @@ jobs:
           # Stop existing containers
           docker-compose down || true
           
+          # Remove old volumes to ensure fresh database
+          docker volume prune -f || true
+          
           # Start new deployment
           docker-compose up -d
+          
+          # Wait for services to start
+          sleep 10
+          
+          # Show container status
+          docker-compose ps
+          
+          # Show logs
+          docker-compose logs --tail=50
           
           # Clean up old images
           docker image prune -f

@@ -29,7 +29,9 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:8081',
   'http://127.0.0.1:5173',
-  'http://172.16.0.2:8081', // Your network IP
+  'http://172.16.0.2:8081',
+  'http://13.62.224.81',
+  'http://13.62.224.81:80',
   process.env.CORS_ORIGIN,
 ].filter(Boolean);
 
@@ -42,7 +44,8 @@ app.use(cors({
       callback(null, true);
     } else {
       console.log(`⚠️  CORS blocked origin: ${origin}`);
-      callback(null, true); // Allow all origins in development
+      // In production, allow the origin anyway for now
+      callback(null, true);
     }
   },
   credentials: true,
