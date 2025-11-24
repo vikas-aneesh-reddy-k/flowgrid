@@ -10,7 +10,7 @@ env:
   DOCKER_REGISTRY: vikaskakarla
   FRONTEND_IMAGE: vikaskakarla/flowgrid-frontend
   BACKEND_IMAGE: vikaskakarla/flowgrid-backend
-  EC2_HOST: 13.53.86.36
+  EC2_HOST: 13.62.224.81
   EC2_USER: ubuntu
 
 jobs:

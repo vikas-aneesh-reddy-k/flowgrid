@@ -12,7 +12,7 @@ pipeline {
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
         
         // EC2 Configuration
-        EC2_HOST = '13.53.86.36'
+        EC2_HOST = '13.62.224.81'
         EC2_USER = 'ubuntu'
     }
     

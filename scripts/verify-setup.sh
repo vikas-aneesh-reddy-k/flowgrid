@@ -3,7 +3,7 @@
 # Setup Verification Script
 set -e
 
-EC2_HOST="13.53.86.36"
+EC2_HOST="13.62.224.81"
 EC2_USER="ubuntu"
 PEM_FILE="flowgrid-key.pem"
 

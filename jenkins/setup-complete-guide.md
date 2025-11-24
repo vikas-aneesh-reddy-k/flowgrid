@@ -3,7 +3,7 @@
 ## Prerequisites Checklist
 - ✅ Jenkins installed on your PC
 - ✅ Docker installed on your PC
-- ✅ EC2 instance created (13.53.86.36)
+- ✅ EC2 instance created (13.62.224.81)
 - ✅ GitHub repository: https://github.com/vikas-aneesh-reddy-k/flowgrid.git
 - ✅ PEM file: flowgrid-key.pem
 
@@ -13,8 +13,8 @@
 ```bash
 # On your local machine
 chmod 400 flowgrid-key.pem
-scp -i flowgrid-key.pem scripts/ec2-setup.sh ubuntu@13.53.86.36:/home/ubuntu/
-ssh -i flowgrid-key.pem ubuntu@13.53.86.36
+scp -i flowgrid-key.pem scripts/ec2-setup.sh ubuntu@13.62.224.81:/home/ubuntu/
+ssh -i flowgrid-key.pem ubuntu@13.62.224.81
 chmod +x ec2-setup.sh
 ./ec2-setup.sh
 ```
@@ -133,14 +133,14 @@ JWT_SECRET=FlowGrid2024SuperSecureJWTSecretKey123456789!
 ## Step 7: Verify Deployment
 
 ### 7.1 Check Application
-- **Frontend**: http://13.53.86.36
-- **Backend API**: http://13.53.86.36:5000/health
+- **Frontend**: http://13.62.224.81
+- **Backend API**: http://13.62.224.81:5000/health
 - **MongoDB**: Should be accessible internally
 
 ### 7.2 Monitor Services
 ```bash
 # SSH to EC2
-ssh -i flowgrid-key.pem ubuntu@13.53.86.36
+ssh -i flowgrid-key.pem ubuntu@13.62.224.81
 
 # Check running containers
 docker-compose ps
@@ -164,7 +164,7 @@ sudo certbot --nginx -d yourdomain.com
 ```
 
 ### 8.2 Domain Setup (Optional)
-1. Point your domain to EC2 IP (13.53.86.36)
+1. Point your domain to EC2 IP (13.62.224.81)
 2. Update nginx configuration for domain
 3. Update CORS settings in backend
 
@@ -197,7 +197,7 @@ docker build -t test .
 # Ensure ports 22, 80, 5000 are open
 
 # Test SSH connection
-ssh -i flowgrid-key.pem ubuntu@13.53.86.36
+ssh -i flowgrid-key.pem ubuntu@13.62.224.81
 ```
 
 #### 4. Application Not Accessible
@@ -243,8 +243,8 @@ docker-compose exec mongodb mongosh
 ## Success Indicators
 
 ✅ **Pipeline Working**: Commits trigger automatic builds
-✅ **Frontend Accessible**: http://13.53.86.36 loads correctly
-✅ **Backend API Working**: http://13.53.86.36:5000/health returns 200
+✅ **Frontend Accessible**: http://13.62.224.81 loads correctly
+✅ **Backend API Working**: http://13.62.224.81:5000/health returns 200
 ✅ **MongoDB Connected**: Backend can connect to database
 ✅ **Docker Images Updated**: Latest images deployed automatically
 ✅ **Health Checks Pass**: All services running correctly
