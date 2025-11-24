@@ -1,230 +1,245 @@
-# FlowGrid - Complete CI/CD Pipeline
+# FlowGrid ERP System
 
-A full-stack ERP application with automated CI/CD pipeline using Jenkins, Docker, and AWS EC2.
+A modern, full-stack ERP system built with React, TypeScript, Node.js, Express, and MongoDB.
 
-## 🏗️ Architecture
+## 🚀 Quick Deploy to AWS EC2
 
-- **Frontend**: React + TypeScript + Vite
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: MongoDB
-- **CI/CD**: Jenkins Pipeline
-- **Containerization**: Docker & Docker Compose
-- **Deployment**: AWS EC2
-- **Monitoring**: Prometheus + Grafana
+**Deploy in 10 minutes!** See [Quick Start Guide](deploy/QUICK_START.md)
 
-## 🚀 Quick Start
+## 📋 Features
 
-### Local Development
+- **Authentication**: Secure login with JWT
+- **Dashboard**: Real-time analytics and insights
+- **Employee Management**: Complete CRUD operations
+- **Responsive Design**: Works on all devices
+- **Modern UI**: Built with shadcn/ui components
+- **Type-Safe**: Full TypeScript support
+- **Dockerized**: Easy deployment with Docker Compose
 
-1. **Clone Repository**:
-   ```bash
-   git clone <repository-url>
-   cd flowgrid
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   # Frontend
-   npm install
-   
-   # Backend
-   cd server
-   npm install
-   cd ..
-   ```
-
-3. **Start Development Environment**:
-   ```bash
-   # Start with Docker Compose
-   docker-compose up -d
-   
-   # Or start individually
-   npm run dev          # Frontend
-   cd server && npm run dev  # Backend
-   ```
-
-4. **Access Application**:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5000
-   - MongoDB: localhost:27017
-
-### Production Deployment
-
-Follow the complete setup guide: [CI/CD Setup Documentation](docs/CI-CD-SETUP.md)
-
-## 🔄 CI/CD Pipeline
-
-The automated pipeline includes:
-
-1. **Code Quality Checks**
-   - ESLint for code quality
-   - TypeScript compilation
-   - Security audits
-
-2. **Testing**
-   - Unit tests (Frontend & Backend)
-   - Integration tests
-   - End-to-end tests
-
-3. **Build & Package**
-   - Docker image creation
-   - Security scanning
-   - Multi-architecture builds
-
-4. **Deployment**
-   - Automated deployment to EC2
-   - Rolling updates
-   - Health checks
-   - Rollback capabilities
-
-## 📊 Monitoring
-
-- **Application Metrics**: Prometheus
-- **Dashboards**: Grafana
-- **Health Checks**: Built-in endpoints
-- **Log Aggregation**: Docker logging
-
-## 🔧 Available Scripts
+## 🛠️ Tech Stack
 
 ### Frontend
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run test:unit    # Run unit tests
-npm run test:e2e     # Run end-to-end tests
-npm run lint         # Run ESLint
-```
+- React 18
+- TypeScript
+- Vite
+- TailwindCSS
+- shadcn/ui
+- React Router
+- React Query
 
 ### Backend
+- Node.js
+- Express
+- TypeScript
+- MongoDB with Mongoose
+- JWT Authentication
+- Helmet (Security)
+- CORS
+
+### DevOps
+- Docker & Docker Compose
+- GitHub Actions (CI/CD)
+- Nginx (Reverse Proxy)
+- AWS EC2
+
+## 📦 Project Structure
+
+```
+flowgrid/
+├── src/                    # Frontend source
+│   ├── components/         # React components
+│   ├── pages/             # Page components
+│   ├── contexts/          # React contexts
+│   ├── hooks/             # Custom hooks
+│   └── lib/               # Utilities
+├── server/                # Backend source
+│   ├── src/
+│   │   ├── controllers/   # Route controllers
+│   │   ├── models/        # MongoDB models
+│   │   ├── routes/        # API routes
+│   │   └── middleware/    # Express middleware
+│   └── Dockerfile         # Backend Docker image
+├── deploy/                # Deployment scripts
+│   ├── QUICK_START.md     # 10-minute deploy guide
+│   ├── README.md          # Full deployment docs
+│   ├── setup-ec2.sh       # EC2 setup script
+│   └── test-deployment.sh # Deployment test script
+├── docker/                # Docker configs
+│   ├── nginx.conf         # Nginx configuration
+│   └── mongo-init.js      # MongoDB initialization
+├── .github/workflows/     # CI/CD pipelines
+│   └── deploy.yml         # Auto-deploy on push
+├── docker-compose.yml     # Multi-container setup
+├── Dockerfile.frontend    # Frontend Docker image
+└── .env.production        # Production env template
+
+## 🚀 Deployment
+
+### Option 1: Quick Deploy (Recommended)
+Follow the [Quick Start Guide](deploy/QUICK_START.md) for automated deployment to AWS EC2.
+
+### Option 2: Manual Deployment
+See the [Full Deployment Guide](deploy/README.md) for detailed instructions.
+
+### Option 3: Local Development
 ```bash
-npm run dev          # Start development server
-npm run build        # Build TypeScript
-npm run start        # Start production server
-npm run test         # Run tests
-npm run test:coverage # Run tests with coverage
+# Install dependencies
+npm install
+cd server && npm install && cd ..
+
+# Start MongoDB
+docker compose up mongodb -d
+
+# Start backend (in one terminal)
+cd server
+npm run dev
+
+# Start frontend (in another terminal)
+npm run dev
 ```
 
-### CI/CD
-```bash
-npm run test:ci      # Run all CI tests
-npm run test:setup   # Setup test environment
-```
+Visit `http://localhost:5173`
 
-## 🐳 Docker Commands
+## 🔧 Configuration
 
-```bash
-# Development
-docker-compose up -d                    # Start all services
-docker-compose logs -f                  # View logs
-docker-compose down                     # Stop all services
+### Environment Variables
 
-# Production
-docker-compose -f docker-compose.prod.yml up -d  # Production deployment
-```
-
-## 🔐 Environment Variables
-
-### Frontend (.env)
+**Frontend** (`.env`):
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-### Backend (server/.env)
+**Backend** (`server/.env`):
 ```env
-MONGODB_URI=mongodb://localhost:27017/flowgrid
-JWT_SECRET=your_jwt_secret
+MONGODB_URI=mongodb://admin:password@localhost:27017/flowgrid?authSource=admin
+JWT_SECRET=your-secret-key
 PORT=5000
 NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
 ```
 
-### Production (.env)
-```env
-MONGO_USER=admin
-MONGO_PASSWORD=secure_password
-JWT_SECRET=production_jwt_secret
-REDIS_PASSWORD=redis_password
-GRAFANA_PASSWORD=grafana_password
-```
+## 🧪 Testing
 
-## 📁 Project Structure
-
-```
-flowgrid/
-├── src/                    # Frontend source code
-├── server/                 # Backend source code
-├── tests/                  # Test files
-├── docker/                 # Docker configurations
-├── jenkins/                # Jenkins setup scripts
-├── aws/                    # AWS deployment scripts
-├── scripts/                # Utility scripts
-├── monitoring/             # Monitoring configurations
-├── docs/                   # Documentation
-├── Jenkinsfile            # Jenkins pipeline definition
-├── docker-compose.yml     # Development Docker setup
-└── README.md              # This file
-```
-
-## 🚨 Deployment & Operations
-
-### Health Checks
-- Frontend: `GET /health`
-- Backend: `GET /api/health`
-- Database: MongoDB ping
-
-### Rollback Procedures
 ```bash
-# Quick rollback to previous version
-./scripts/deployment-rollback.sh rollback v1.2.3
+# Unit tests
+npm run test:unit
 
-# Emergency rollback
-./scripts/deployment-rollback.sh emergency
+# API tests
+npm run test:api
 
-# Check deployment status
-./scripts/deployment-rollback.sh status
+# E2E tests
+npm run test:e2e
+
+# All tests
+npm run test:all
 ```
 
-### Monitoring
+## 📝 API Documentation
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/me` - Get current user
+
+### Employees
+- `GET /api/employees` - List all employees
+- `GET /api/employees/:id` - Get employee by ID
+- `POST /api/employees` - Create employee
+- `PUT /api/employees/:id` - Update employee
+- `DELETE /api/employees/:id` - Delete employee
+
+### Dashboard
+- `GET /api/dashboard/stats` - Get dashboard statistics
+
+### Health
+- `GET /health` - Health check endpoint
+
+## 🔒 Security
+
+- JWT-based authentication
+- Password hashing with bcrypt
+- Helmet.js for security headers
+- CORS configuration
+- Input validation
+- MongoDB injection prevention
+
+## 📊 MongoDB Connection
+
+**Local Development:**
+```
+mongodb://admin:password@localhost:27017/flowgrid?authSource=admin
+```
+
+**Production (EC2):**
+```
+mongodb://admin:PASSWORD@YOUR_EC2_IP:27017/flowgrid?authSource=admin
+```
+
+Use MongoDB Compass to connect and manage your database.
+
+## 🔄 CI/CD Pipeline
+
+Automatic deployment on push to `main`:
+1. Build Docker images
+2. Push to Docker Hub
+3. Deploy to EC2
+4. Restart services
+
+See [GitHub Actions](.github/workflows/deploy.yml) for details.
+
+## 🐛 Troubleshooting
+
+### Check service status
 ```bash
-# Application monitoring
-./monitor.sh
-
-# View logs
-docker-compose logs -f [service_name]
-
-# Resource usage
-docker stats
+docker compose ps
 ```
 
-## 🔒 Security Features
+### View logs
+```bash
+docker compose logs -f [service-name]
+```
 
-- **Container Security**: Non-root users, security scanning
-- **Network Security**: Firewall configuration, VPC isolation
-- **Application Security**: JWT authentication, input validation
-- **Infrastructure Security**: SSH key authentication, fail2ban
+### Restart services
+```bash
+docker compose restart
+```
+
+### Test deployment
+```bash
+./deploy/test-deployment.sh
+```
+
+## 📚 Documentation
+
+- [Quick Start Guide](deploy/QUICK_START.md) - Deploy in 10 minutes
+- [Full Deployment Guide](deploy/README.md) - Detailed deployment instructions
+- [API Documentation](#api-documentation) - API endpoints reference
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
 
-## 📝 License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - feel free to use this project for learning and development.
 
-## 🆘 Support
+## 🙏 Acknowledgments
 
-- **Documentation**: [docs/CI-CD-SETUP.md](docs/CI-CD-SETUP.md)
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
+- Built with [shadcn/ui](https://ui.shadcn.com/)
+- Icons by [Lucide](https://lucide.dev/)
+- Deployed on [AWS EC2](https://aws.amazon.com/ec2/)
 
-## 🎯 Roadmap
+## 📞 Support
 
-- [ ] Kubernetes deployment option
-- [ ] Multi-region deployment
-- [ ] Advanced monitoring and alerting
-- [ ] Automated security scanning
-- [ ] Performance optimization
-- [ ] Blue-green deployment strategy
+For issues and questions:
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Review [deployment logs](deploy/README.md#troubleshooting)
+3. Open an issue on GitHub
+
+---
+
+**Ready to deploy?** Start with the [Quick Start Guide](deploy/QUICK_START.md)! 🚀

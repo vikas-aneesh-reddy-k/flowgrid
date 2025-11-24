@@ -1,59 +1,45 @@
-# Logs
-logs
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Production
+/dist
+/build
 
 # Environment variables
 .env
 .env.local
-.env.production
-.env.development
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Security keys
-*.pem
-*.key
-*.p12
-*.pfx
-
-# CI/CD and deployment
-setup-ec2-direct.sh
-.aws/
-deployment-logs/
-
-# Temporary files
-*.tmp
-*.temp
-
-# Docker
-.dockerignore
-
-# Testing
-coverage
-.nyc_output
-
-# Build outputs
-build
-*.tsbuildinfo
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # OS
+.DS_Store
 Thumbs.db
+
+# Keys and secrets
+*.pem
+*.key
+*.cert
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
