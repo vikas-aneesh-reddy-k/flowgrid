@@ -107,21 +107,46 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the real register API
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
+          name: `${userData.firstName} ${userData.lastName}`,
+          role: userData.role || 'sales_rep',
+        }),
+      });
+
+      if (!response.ok) {
+        setIsLoading(false);
+        return false;
+      }
+
+      const data = await response.json();
       
+      // Store the authentication token
+      localStorage.setItem("authToken", data.token);
       localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("userEmail", userData.email);
-      localStorage.setItem("userName", `${userData.firstName} ${userData.lastName}`);
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("userName", data.user.name);
       
       setUser({
-        email: userData.email,
-        name: `${userData.firstName} ${userData.lastName}`,
+        email: data.user.email,
+        name: data.user.name,
       });
       
       setIsLoading(false);
+      
+      // Force page reload to ensure all components re-render with auth state
+      window.location.href = '/';
+      
       return true;
     } catch (error) {
+      console.error('Signup error:', error);
       setIsLoading(false);
       return false;
     }
