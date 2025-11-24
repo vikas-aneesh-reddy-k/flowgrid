@@ -91,6 +91,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
       
       setIsLoading(false);
+      
+      // Force page reload to ensure all components re-render with auth state
+      window.location.href = '/';
+      
       return true;
     } catch (error) {
       console.error('Login error:', error);
