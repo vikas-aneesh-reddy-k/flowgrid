@@ -122,9 +122,9 @@ pipeline {
                     bat """
                         curl -X POST -H "X-Deploy-Token: deploy-secret-token-12345" http://${env.EC2_HOST}:9000/hooks/deploy-flowgrid
                     """
-                    echo "Deployment triggered successfully!"
+                    echo "✅ Deployment triggered successfully!"
                     echo "Waiting for deployment to complete..."
-                    bat "timeout /t 15 /nobreak"
+                    sleep 15
                 }
             }
         }
