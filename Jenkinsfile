@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        label 'master'
-    }
+    agent any
     
     environment {
         DOCKER_USERNAME = 'vikaskakarla'
@@ -14,7 +12,11 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    if (isUnix()) {
+                        env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    } else {
+                        env.GIT_COMMIT_SHORT = bat(script: "@git rev-parse --short HEAD", returnStdout: true).trim()
+                    }
                     echo "Building commit: ${env.GIT_COMMIT_SHORT}"
                 }
             }
