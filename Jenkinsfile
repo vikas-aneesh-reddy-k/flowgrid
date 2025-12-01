@@ -121,6 +121,8 @@ pipeline {
                     echo "Deploying to EC2: ${env.EC2_HOST}"
                     withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                         bat """
+                            icacls "%SSH_KEY%" /inheritance:r
+                            icacls "%SSH_KEY%" /grant:r "%USERNAME%:R"
                             ssh -i "%SSH_KEY%" -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL ${env.EC2_USERNAME}@${env.EC2_HOST} "cd /home/ubuntu/flowgrid && docker compose pull && docker compose up -d && docker compose ps"
                         """
                     }
