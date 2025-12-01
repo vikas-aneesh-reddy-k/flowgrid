@@ -118,19 +118,13 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 script {
-                    echo "Deploying to EC2: ${env.EC2_HOST}"
-                    withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
-                        powershell """
-                            \$keyPath = \$env:SSH_KEY
-                            # Fix permissions
-                            icacls \$keyPath /reset
-                            icacls \$keyPath /inheritance:r
-                            icacls \$keyPath /grant:r "\${env:USERNAME}:(R)"
-                            
-                            # Deploy to EC2
-                            ssh -i \$keyPath -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL ${env.EC2_USERNAME}@${env.EC2_HOST} "cd /home/ubuntu/flowgrid && docker compose pull && docker compose up -d && docker compose ps"
-                        """
-                    }
+                    echo "Triggering deployment on EC2: ${env.EC2_HOST}"
+                    bat """
+                        curl -X POST -H "X-Deploy-Token: deploy-secret-token-12345" http://${env.EC2_HOST}:9000/hooks/deploy-flowgrid
+                    """
+                    echo "Deployment triggered successfully!"
+                    echo "Waiting for deployment to complete..."
+                    bat "timeout /t 15 /nobreak"
                 }
             }
         }
