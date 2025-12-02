@@ -102,14 +102,16 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                        // Push backend images
-                        bat "docker push ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT}"
-                        bat "docker push ${BACKEND_IMAGE}:latest"
-                        
-                        // Push frontend images
-                        bat "docker push ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT}"
-                        bat "docker push ${FRONTEND_IMAGE}:latest"
+                    retry(3) {
+                        docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                            echo "Pushing backend images..."
+                            bat "docker push ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} || exit 0"
+                            bat "docker push ${BACKEND_IMAGE}:latest"
+                            
+                            echo "Pushing frontend images..."
+                            bat "docker push ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} || exit 0"
+                            bat "docker push ${FRONTEND_IMAGE}:latest"
+                        }
                     }
                 }
             }
