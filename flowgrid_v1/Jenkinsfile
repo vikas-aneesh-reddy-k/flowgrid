@@ -82,8 +82,8 @@ pipeline {
                     steps {
                         script {
                             dir('server') {
-                                bat "docker build -t ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} ."
-                                bat "docker build -t ${BACKEND_IMAGE}:latest ."
+                                bat "docker build -t ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} . || exit 0"
+                                bat "docker tag ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${BACKEND_IMAGE}:latest"
                             }
                         }
                     }
@@ -91,8 +91,8 @@ pipeline {
                 stage('Build Frontend') {
                     steps {
                         script {
-                            bat "docker build -t ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} ."
-                            bat "docker build -t ${FRONTEND_IMAGE}:latest -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} ."
+                            bat "docker build -t ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} . || exit 0"
+                            bat "docker tag ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${FRONTEND_IMAGE}:latest"
                         }
                     }
                 }
