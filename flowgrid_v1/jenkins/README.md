@@ -2,18 +2,28 @@
 
 This directory contains Jenkins configuration files for automated CI/CD pipeline.
 
+## 🚨 Deploy to EC2 Failing? Start Here!
+
+**If your Jenkins "Deploy to EC2" stage is failing**, follow this quick fix:
+👉 **[QUICK_FIX.md](./QUICK_FIX.md)** - 5-minute fix for deployment issues
+
 ## Quick Start
 
-### 1. Install Jenkins
+### For Windows Users
+Follow the complete guide: **[WINDOWS_SETUP.md](./WINDOWS_SETUP.md)**
+
+### For Linux/Mac Users
+
+#### 1. Install Jenkins
 ```bash
 chmod +x jenkins/install-jenkins.sh
 ./jenkins/install-jenkins.sh
 ```
 
-### 2. Access Jenkins
+#### 2. Access Jenkins
 Open `http://YOUR_SERVER_IP:8080` in your browser
 
-### 3. Complete Setup
+#### 3. Complete Setup
 Follow the detailed instructions in [JENKINS_SETUP.md](./JENKINS_SETUP.md)
 
 ## Files

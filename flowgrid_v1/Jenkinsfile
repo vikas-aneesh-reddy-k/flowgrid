@@ -122,25 +122,23 @@ pipeline {
                 script {
                     echo "Deploying to EC2: ${env.EC2_HOST}"
                     
-                    // Use SSH to deploy (requires SSH Agent plugin and EC2 credentials)
-                    sshagent(credentials: ['ec2-ssh-key']) {
-                        if (isUnix()) {
-                            sh """
-                                ssh -o StrictHostKeyChecking=no ${env.EC2_USERNAME}@${env.EC2_HOST} '
-                                    cd /home/ubuntu/flowgrid &&
-                                    docker compose pull &&
-                                    docker compose down &&
-                                    docker compose up -d &&
-                                    docker image prune -af &&
-                                    docker compose ps
-                                '
-                            """
-                        } else {
-                            // For Windows Jenkins, use plink (PuTTY)
-                            bat """
-                                plink -batch -i "%EC2_SSH_KEY_PATH%" ${env.EC2_USERNAME}@${env.EC2_HOST} "cd /home/ubuntu/flowgrid && docker compose pull && docker compose down && docker compose up -d && docker compose ps"
-                            """
-                        }
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+                        // Create temporary deployment script
+                        bat """
+                            echo cd /home/ubuntu/flowgrid > deploy_temp.sh
+                            echo docker compose pull >> deploy_temp.sh
+                            echo docker compose down >> deploy_temp.sh
+                            echo docker compose up -d >> deploy_temp.sh
+                            echo docker image prune -af >> deploy_temp.sh
+                            echo docker compose ps >> deploy_temp.sh
+                        """
+                        
+                        // Copy script to EC2 and execute
+                        bat """
+                            scp -o StrictHostKeyChecking=no -i "%SSH_KEY%" deploy_temp.sh ${env.EC2_USERNAME}@${env.EC2_HOST}:/home/ubuntu/deploy_temp.sh
+                            ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${env.EC2_USERNAME}@${env.EC2_HOST} "chmod +x /home/ubuntu/deploy_temp.sh && /home/ubuntu/deploy_temp.sh && rm /home/ubuntu/deploy_temp.sh"
+                            del deploy_temp.sh
+                        """
                     }
                     
                     echo "✅ Deployment completed successfully!"
