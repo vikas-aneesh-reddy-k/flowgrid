@@ -1,0 +1,102 @@
+================================================================================
+  QUICK FIX: Jenkins Building with Old IP
+================================================================================
+
+PROBLEM: Jenkins is building frontend with old IP address (16.170.155.235)
+
+SOLUTION: The Jenkinsfile now has HARDCODED values that will ALWAYS use the
+          correct configuration, regardless of Jenkins settings.
+
+================================================================================
+  WHAT WAS FIXED
+================================================================================
+
+1. ✅ Jenkinsfile - Added hardcoded environment variables:
+   - VITE_API_URL = '/api'
+   - EC2_HOST = '13.51.176.153'
+   - EC2_USERNAME = 'ubuntu'
+
+2. ✅ GitHub Actions - Updated to use '/api' and new EC2 IP directly
+   (no longer depends on GitHub Secrets for these values)
+
+3. ✅ All changes pushed to GitHub
+
+================================================================================
+  WHAT TO DO NOW
+================================================================================
+
+OPTION 1: Just Trigger a New Build (EASIEST)
+---------------------------------------------
+1. Open Jenkins: http://YOUR_JENKINS_URL:8080
+2. Click on your FlowGrid pipeline job
+3. Click "Build Now"
+4. Wait for build to complete
+5. Clear browser cache and test
+
+The Jenkinsfile will automatically use the correct values!
+
+
+OPTION 2: If Jenkins Still Uses Old Values
+-------------------------------------------
+Jenkins might have cached the old Jenkinsfile. Force it to reload:
+
+1. Open Jenkins job → Configure
+2. Under "Pipeline" section:
+   - Make sure "Definition" is "Pipeline script from SCM"
+   - Make sure "Branch Specifier" is "*/main"
+   - UNCHECK "Lightweight checkout" (if checked)
+3. Save
+4. Click "Build Now"
+
+
+OPTION 3: Restart Jenkins (If Still Not Working)
+-------------------------------------------------
+SSH into your Jenkins server and run:
+
+sudo systemctl restart jenkins
+
+Then trigger a new build.
+
+================================================================================
+  VERIFY IT'S WORKING
+================================================================================
+
+After triggering a new build:
+
+1. Click on the build number (e.g., #5)
+2. Click "Console Output"
+3. Look for this line:
+
+   docker build ... --build-arg VITE_API_URL=/api ...
+
+4. Should show "/api" NOT "http://16.170.155.235:5000/api"
+
+5. Look for deployment line:
+
+   Deploying to EC2: 13.51.176.153
+
+6. Should show new IP, not old IP
+
+================================================================================
+  AFTER SUCCESSFUL BUILD
+================================================================================
+
+1. Clear your browser cache (Ctrl + Shift + R)
+2. Open: http://13.51.176.153
+3. Open browser console (F12)
+4. Should see NO errors about old IP
+5. All API calls should go to /api/...
+
+================================================================================
+  SUMMARY
+================================================================================
+
+✅ Jenkinsfile updated with correct hardcoded values
+✅ GitHub Actions updated with correct values
+✅ Changes pushed to GitHub
+✅ Jenkins will now ALWAYS build with /api
+✅ Jenkins will now ALWAYS deploy to 13.51.176.153
+
+NEXT: Trigger a new build in Jenkins and verify the console output!
+
+================================================================================
