@@ -31,12 +31,14 @@ pipeline {
             parallel {
                 stage('Frontend Dependencies') {
                     steps {
-                        bat 'npm ci'
+                        dir('flowgrid_v1') {
+                            bat 'npm ci'
+                        }
                     }
                 }
                 stage('Backend Dependencies') {
                     steps {
-                        dir('server') {
+                        dir('flowgrid_v1/server') {
                             bat 'npm ci'
                         }
                     }
@@ -48,17 +50,21 @@ pipeline {
             parallel {
                 stage('Frontend Lint') {
                     steps {
-                        bat 'npm run lint || exit 0'
+                        dir('flowgrid_v1') {
+                            bat 'npm run lint || exit 0'
+                        }
                     }
                 }
                 stage('Frontend Type Check') {
                     steps {
-                        bat 'npm run typecheck || exit 0'
+                        dir('flowgrid_v1') {
+                            bat 'npm run typecheck || exit 0'
+                        }
                     }
                 }
                 stage('Backend Lint') {
                     steps {
-                        dir('server') {
+                        dir('flowgrid_v1/server') {
                             bat 'npm run lint || exit 0'
                         }
                     }
@@ -70,12 +76,16 @@ pipeline {
             parallel {
                 stage('Unit Tests') {
                     steps {
-                        bat 'npm run test:unit || exit 0'
+                        dir('flowgrid_v1') {
+                            bat 'npm run test:unit || exit 0'
+                        }
                     }
                 }
                 stage('API Tests') {
                     steps {
-                        bat 'npm run test:api || exit 0'
+                        dir('flowgrid_v1') {
+                            bat 'npm run test:api || exit 0'
+                        }
                     }
                 }
             }
@@ -86,7 +96,7 @@ pipeline {
                 stage('Build Backend') {
                     steps {
                         script {
-                            dir('server') {
+                            dir('flowgrid_v1/server') {
                                 bat "docker build -t ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} . || exit 0"
                                 bat "docker tag ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${BACKEND_IMAGE}:latest"
                             }
@@ -96,8 +106,10 @@ pipeline {
                 stage('Build Frontend') {
                     steps {
                         script {
-                            bat "docker build -t ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} . || exit 0"
-                            bat "docker tag ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${FRONTEND_IMAGE}:latest"
+                            dir('flowgrid_v1') {
+                                bat "docker build -t ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} . || exit 0"
+                                bat "docker tag ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${FRONTEND_IMAGE}:latest"
+                            }
                         }
                     }
                 }
