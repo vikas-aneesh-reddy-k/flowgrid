@@ -107,3 +107,19 @@ export const deleteCustomer = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Public endpoint for getting company names (for signup page)
+export const getCompanyNames = async (req: Request, res: Response) => {
+  try {
+    const companies = await Customer.find({ status: { $in: ['active', 'premium'] } })
+      .select('company _id')
+      .sort({ company: 1 });
+
+    res.json({
+      success: true,
+      data: companies,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};

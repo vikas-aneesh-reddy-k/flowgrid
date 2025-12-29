@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { api } from "@/lib/api";
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -33,8 +32,10 @@ export default function SignUp() {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await api.getCustomers();
-        setCompanies(response.data || []);
+        // Use public endpoint that doesn't require authentication
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/customers/companies`);
+        const data = await response.json();
+        setCompanies(data.data || []);
       } catch (error) {
         console.error('Error fetching companies:', error);
         toast({
