@@ -5,6 +5,9 @@ pipeline {
         DOCKER_USERNAME = 'vikaskakarla'
         FRONTEND_IMAGE = "${DOCKER_USERNAME}/flowgrid-frontend"
         BACKEND_IMAGE = "${DOCKER_USERNAME}/flowgrid-backend"
+        VITE_API_URL = '/api'  // Use relative path for nginx proxy
+        EC2_HOST = '13.51.176.153'  // Updated EC2 IP
+        EC2_USERNAME = 'ubuntu'
     }
     
     stages {
