@@ -144,30 +144,6 @@ export default function Login() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Demo Credentials */}
-        <Card className="bg-muted/50 border-dashed">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-2">
-              <p className="text-sm font-medium text-foreground">Demo Credentials</p>
-              <p className="text-xs text-muted-foreground">
-                Use any email and password to login<br />
-                (Demo mode - no real authentication)
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEmail("admin@flowgrid.com");
-                  setPassword("admin123");
-                }}
-                className="mt-2"
-              >
-                Fill Demo Credentials
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

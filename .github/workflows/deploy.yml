@@ -46,7 +46,7 @@ jobs:
           file: ./Dockerfile.frontend
           push: true
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_API_URL=/api
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
@@ -56,8 +56,8 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
+          host: 13.51.176.153
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/flowgrid

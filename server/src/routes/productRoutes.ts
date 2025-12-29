@@ -14,8 +14,8 @@ const router = Router();
 router.get('/', authenticate, getProducts);
 router.get('/low-stock', authenticate, getLowStockProducts);
 router.get('/:id', authenticate, getProduct);
-router.post('/', authenticate, authorize('admin', 'inventory_manager'), createProduct);
-router.put('/:id', authenticate, authorize('admin', 'inventory_manager'), updateProduct);
+router.post('/', authenticate, authorize('admin', 'inventory_manager', 'sales_manager'), createProduct);
+router.put('/:id', authenticate, authorize('admin', 'inventory_manager', 'sales_manager'), updateProduct);
 router.delete('/:id', authenticate, authorize('admin', 'inventory_manager'), deleteProduct);
 
 export default router;

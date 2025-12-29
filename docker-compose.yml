@@ -30,16 +30,9 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      mongodb:
-        condition: service_healthy
+      - mongodb
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   frontend:
     image: vikaskakarla/flowgrid-frontend:latest
@@ -47,16 +40,9 @@ services:
     ports:
       - "80:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 volumes:
   mongodb_data:

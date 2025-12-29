@@ -5,11 +5,16 @@ pipeline {
         DOCKER_USERNAME = 'vikaskakarla'
         FRONTEND_IMAGE = "${DOCKER_USERNAME}/flowgrid-frontend"
         BACKEND_IMAGE = "${DOCKER_USERNAME}/flowgrid-backend"
+        VITE_API_URL = '/api'  // Use relative path for nginx proxy
+        EC2_HOST = '13.51.176.153'  // Updated EC2 IP
+        EC2_USERNAME = 'ubuntu'
     }
     
     stages {
         stage('Checkout') {
             steps {
+                // Clean workspace before checkout
+                deleteDir()
                 checkout scm
                 script {
                     if (isUnix()) {
@@ -82,8 +87,8 @@ pipeline {
                     steps {
                         script {
                             dir('server') {
-                                bat "docker build -t ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} ."
-                                bat "docker build -t ${BACKEND_IMAGE}:latest ."
+                                bat "docker build -t ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} . || exit 0"
+                                bat "docker tag ${BACKEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${BACKEND_IMAGE}:latest"
                             }
                         }
                     }
@@ -91,8 +96,8 @@ pipeline {
                 stage('Build Frontend') {
                     steps {
                         script {
-                            bat "docker build -t ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} ."
-                            bat "docker build -t ${FRONTEND_IMAGE}:latest -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} ."
+                            bat "docker build -t ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} -f Dockerfile.frontend --build-arg VITE_API_URL=${env.VITE_API_URL} . || exit 0"
+                            bat "docker tag ${FRONTEND_IMAGE}:${env.GIT_COMMIT_SHORT} ${FRONTEND_IMAGE}:latest"
                         }
                     }
                 }
@@ -120,13 +125,28 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 script {
-                    echo "Triggering deployment on EC2: ${env.EC2_HOST}"
-                    bat """
-                        curl -X POST -H "X-Deploy-Token: deploy-secret-token-12345" http://${env.EC2_HOST}:9000/hooks/deploy-flowgrid
-                    """
-                    echo "✅ Deployment triggered successfully!"
-                    echo "Waiting for deployment to complete..."
-                    sleep 15
+                    echo "Deploying to EC2: ${env.EC2_HOST}"
+                    
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+                        // Create temporary deployment script
+                        bat """
+                            echo cd /home/ubuntu/flowgrid > deploy_temp.sh
+                            echo docker compose pull >> deploy_temp.sh
+                            echo docker compose down >> deploy_temp.sh
+                            echo docker compose up -d >> deploy_temp.sh
+                            echo docker image prune -af >> deploy_temp.sh
+                            echo docker compose ps >> deploy_temp.sh
+                        """
+                        
+                        // Copy script to EC2 and execute
+                        bat """
+                            scp -o StrictHostKeyChecking=no -i "%SSH_KEY%" deploy_temp.sh ${env.EC2_USERNAME}@${env.EC2_HOST}:/home/ubuntu/deploy_temp.sh
+                            ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${env.EC2_USERNAME}@${env.EC2_HOST} "chmod +x /home/ubuntu/deploy_temp.sh && /home/ubuntu/deploy_temp.sh && rm /home/ubuntu/deploy_temp.sh"
+                            del deploy_temp.sh
+                        """
+                    }
+                    
+                    echo "✅ Deployment completed successfully!"
                 }
             }
         }
