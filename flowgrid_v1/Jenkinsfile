@@ -13,6 +13,8 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                // Clean workspace before checkout
+                deleteDir()
                 checkout scm
                 script {
                     if (isUnix()) {
