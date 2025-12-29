@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, Building2, Check } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Building2, Check, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -16,7 +18,10 @@ export default function SignUp() {
     password: "",
     confirmPassword: "",
     company: "",
+    role: "sales_rep",
   });
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -24,10 +29,45 @@ export default function SignUp() {
   const { toast } = useToast();
   const { signup, isLoading } = useAuth();
 
+  // Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await api.getCustomers();
+        setCompanies(response.data || []);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load companies. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+
+    fetchCompanies();
+  }, [toast]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleCompanyChange = (value: string) => {
+    setFormData({
+      ...formData,
+      company: value,
+    });
+  };
+
+  const handleRoleChange = (value: string) => {
+    setFormData({
+      ...formData,
+      role: value,
     });
   };
 
@@ -149,19 +189,48 @@ export default function SignUp() {
 
               <div className="space-y-2">
                 <Label htmlFor="company">Company</Label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="company"
-                    name="company"
-                    type="text"
-                    placeholder="Your Company Inc."
-                    value={formData.company}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required
-                  />
-                </div>
+                <Select
+                  value={formData.company}
+                  onValueChange={handleCompanyChange}
+                  disabled={loadingCompanies}
+                >
+                  <SelectTrigger className="w-full">
+                    <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder={loadingCompanies ? "Loading companies..." : "Select your company"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.length === 0 && !loadingCompanies ? (
+                      <SelectItem value="none" disabled>No companies available</SelectItem>
+                    ) : (
+                      companies.map((company) => (
+                        <SelectItem key={company._id} value={company.company}>
+                          {company.company}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={handleRoleChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="sales_manager">Sales Manager</SelectItem>
+                    <SelectItem value="sales_rep">Sales Representative</SelectItem>
+                    <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
+                    <SelectItem value="accountant">Accountant</SelectItem>
+                    <SelectItem value="hr_manager">HR Manager</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
