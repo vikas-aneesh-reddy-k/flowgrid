@@ -1,0 +1,127 @@
+================================================================================
+  FLOWGRID - READY TO BUILD FOR NEW EC2 IP: 13.51.176.153
+================================================================================
+
+✅ ALL CHANGES COMMITTED AND PUSHED TO GITHUB
+
+WHAT WAS UPDATED:
+-----------------
+1. .env.production - Updated CORS_ORIGIN to new IP (13.51.176.153)
+2. rebuild-frontend.sh - Linux/Mac build script (auto-pushes to Docker Hub)
+3. rebuild-frontend.bat - Windows build script (auto-pushes to Docker Hub)
+4. quick-fix-ec2.md - Updated with new IP and deployment instructions
+5. DEPLOYMENT_NEW_IP.md - Comprehensive deployment guide
+6. BUILD_AND_DEPLOY.md - Quick reference guide
+
+KEY CHANGES:
+------------
+- Frontend now uses RELATIVE path "/api" instead of hardcoded IP
+- Nginx proxies /api requests to backend (port 5000, internal only)
+- Only port 80 exposed to internet (more secure)
+- CORS configured for new IP: 13.51.176.153
+
+================================================================================
+  STEP 1: BUILD AND PUSH (Run on your Windows machine)
+================================================================================
+
+Option A - Use the batch script (RECOMMENDED):
+-----------------------------------------------
+Double-click: rebuild-frontend.bat
+
+Option B - Manual commands:
+---------------------------
+docker build --build-arg VITE_API_URL=/api -f Dockerfile.frontend -t vikaskakarla/flowgrid-frontend:latest .
+docker push vikaskakarla/flowgrid-frontend:latest
+
+================================================================================
+  STEP 2: DEPLOY ON EC2
+================================================================================
+
+1. SSH into EC2:
+   ssh -i flowgrid.pem ubuntu@13.51.176.153
+
+2. Navigate to app directory:
+   cd /home/ubuntu/flowgrid
+
+3. Update .env file (if not already done):
+   nano .env
+   
+   Ensure it contains:
+   CORS_ORIGIN=http://13.51.176.153
+
+4. Pull and restart:
+   docker-compose pull
+   docker-compose down
+   docker-compose up -d
+
+5. Check status:
+   docker-compose ps
+
+6. View logs (optional):
+   docker-compose logs -f
+
+================================================================================
+  STEP 3: VERIFY DEPLOYMENT
+================================================================================
+
+1. Open browser: http://13.51.176.153
+
+2. Open browser console (F12) and run:
+   fetch('/api/health').then(r => r.json()).then(console.log)
+   
+   Should return: {"status":"ok","timestamp":"..."}
+
+3. Test authentication:
+   - Register a new user
+   - Login
+   - Check console for errors
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+If you see connection errors:
+------------------------------
+On EC2:
+  docker-compose logs frontend
+  docker-compose logs backend
+  docker-compose restart backend
+
+If CORS errors:
+---------------
+On EC2:
+  cat /home/ubuntu/flowgrid/.env
+  # Verify CORS_ORIGIN=http://13.51.176.153
+  docker-compose restart backend
+
+Force recreate frontend:
+------------------------
+On EC2:
+  docker-compose up -d --force-recreate frontend
+
+================================================================================
+  ARCHITECTURE
+================================================================================
+
+Browser (http://13.51.176.153)
+    ↓
+Nginx Container (port 80) - Serves frontend
+    ↓ /api/* requests
+Backend Container (port 5000, internal only)
+    ↓
+MongoDB Container (port 27017, internal only)
+
+================================================================================
+  IMPORTANT NOTES
+================================================================================
+
+✅ No hardcoded IPs in frontend code
+✅ Only port 80 exposed to internet (secure)
+✅ Backend port 5000 is internal only
+✅ CORS configured for new IP
+✅ All changes pushed to GitHub
+✅ Ready to build and deploy!
+
+================================================================================
+  NEXT: RUN rebuild-frontend.bat TO START THE BUILD
+================================================================================
