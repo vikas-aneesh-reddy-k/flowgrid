@@ -30,7 +30,7 @@ export default function Dashboard() {
     <div className="p-6 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard1</h1>
         <p className="text-muted-foreground">Welcome back! Here's what's happening with your business today.</p>
       </div>
 
@@ -78,7 +78,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <RevenueChart />
         </div>
-        
+
         {/* Quick Actions - Takes 1 column */}
         <div>
           <QuickActions />
@@ -97,7 +97,7 @@ export default function Dashboard() {
         <div className="flex-1">
           <h4 className="font-medium text-foreground">System Maintenance Scheduled</h4>
           <p className="text-sm text-muted-foreground mt-1">
-            The system will undergo maintenance on Sunday, Dec 24th from 2:00 AM to 4:00 AM EST. 
+            The system will undergo maintenance on Sunday, Dec 24th from 2:00 AM to 4:00 AM EST.
             Please save your work before this time.
           </p>
         </div>
