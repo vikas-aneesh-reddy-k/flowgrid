@@ -1,4 +1,11 @@
-import { DollarSign, Package, Users, ShoppingCart, TrendingUp, AlertTriangle } from "lucide-react";
+import {
+  DollarSign,
+  Package,
+  Users,
+  ShoppingCart,
+  TrendingUp,
+  AlertTriangle,
+} from "lucide-react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { InventoryStatus } from "@/components/dashboard/InventoryStatus";
@@ -15,7 +22,9 @@ export default function Dashboard() {
       <div className="p-6 space-y-6">
         <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         </div>
         <Skeleton className="h-96 w-full" />
       </div>
@@ -30,8 +39,10 @@ export default function Dashboard() {
     <div className="p-6 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard1</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening with your business today.</p>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Welcome back! Here's what's happening with your business today.
+        </p>
       </div>
 
       {/* KPI Cards */}
@@ -95,10 +106,12 @@ export default function Dashboard() {
       <div className="bg-warning-light border border-warning/20 rounded-lg p-4 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-warning mt-0.5" />
         <div className="flex-1">
-          <h4 className="font-medium text-foreground">System Maintenance Scheduled</h4>
+          <h4 className="font-medium text-foreground">
+            System Maintenance Scheduled
+          </h4>
           <p className="text-sm text-muted-foreground mt-1">
-            The system will undergo maintenance on Sunday, Dec 24th from 2:00 AM to 4:00 AM EST.
-            Please save your work before this time.
+            The system will undergo maintenance on Sunday, Dec 24th from 2:00 AM
+            to 4:00 AM EST. Please save your work before this time.
           </p>
         </div>
       </div>
